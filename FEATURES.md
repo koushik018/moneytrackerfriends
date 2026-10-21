@@ -12,6 +12,9 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
   balance; otherwise it adds a "Balance correction" entry.
 - **Free to spend** = balance − minimum balance − money on hold for IPOs.
 
+## Received money
+- When you record money received, pick the bank or cash account and **how it came**: the UPI apps linked to that bank come first (PhonePe, GPay …), then other UPI apps, bank transfer, cash deposit, cheque or other. History shows it next to the entry.
+
 ## Payment methods
 - UPI apps (PhonePe, BHIM, GPay, Paytm, bank UPI), debit cards, credit cards, wallets, cash.
 - **Modes:** person (P2P UPI), shop QR, card tap/swipe, online/app.

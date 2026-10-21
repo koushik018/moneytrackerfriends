@@ -915,6 +915,13 @@ function addPreset(p, bal, lim){
 }
 
 /* ---------- ADD ---------- */
+/* received money: which app or channel it came through, for the bank you chose */
+function incViaOpts(accId, sel){
+  const a = acc(accId), linked = [...new Set(S.methods.filter(m => m.accountId===accId && m.kind==='upi' && m.app).map(m => m.app))], rest = APPS.filter(x => !linked.includes(x)), tail = a && a.type==='cash' ? ['Cash'] : ['Bank transfer (NEFT / IMPS)', 'Cash deposit', 'Cheque', 'Other'];
+  const o = (v, l) => `<option value="${esc(v)}" ${v===sel ? 'selected' : ''}>${esc(l || v)}</option>`;
+  return (a && a.type==='cash' ? '' : linked.map(x => o(x, x + ' (linked)')).join('') + rest.map(x => o(x)).join('')) + tail.map(x => o(x)).join('');
+}
+function incVia(){ const v = $('a_via'); if(v) v.innerHTML = incViaOpts(mv('a_to')); }
 function rAdd(){
   const f = V.f, ms = S.methods.filter(m => !m.inactive && acc(m.accountId) && !acc(m.accountId).inactive);
   const accs = S.accounts.filter(a => !a.inactive);
@@ -936,7 +943,8 @@ function rAdd(){
     ${f.type==='expense' ? `<label class="f">Cashback you got (₹) – optional, overrides the rule<input id="a_cb" type="number" step="0.01" placeholder="leave empty to use the card rule"></label>` : ''}`;
   } else if(f.type==='income'){
     body = `<div class="row"><label class="f" style="flex:2">From whom?<input id="a_desc" placeholder="e.g. Amma, Salary, Friend"></label><label class="f">Amount (₹)<input id="a_amt" type="number" inputmode="decimal"></label></div>
-    <div class="row"><label class="f">Received in<select id="a_to">${accOpt('',false)}</select></label><label class="f">Date & time<input id="a_date" type="datetime-local" value="${nowLocal()}"></label></div>`;
+    <div class="row"><label class="f">Received in<select id="a_to" onchange="incVia()">${accOpt('',false)}</select></label><label class="f">Received through<select id="a_via">${incViaOpts(accs.filter(a => a.type!=='external')[0]?.id)}</select></label></div>
+    <label class="f">Date & time<input id="a_date" type="datetime-local" value="${nowLocal()}"></label>`;
   } else {
     body = `<div class="row"><label class="f">From<select id="a_from">${accOpt('')}</select></label><label class="f">To<select id="a_to">${accOpt('')}</select></label><label class="f">Amount (₹)<input id="a_amt" type="number" inputmode="decimal"></label></div>
     <div class="row"><label class="f" style="flex:2">Note<input id="a_desc" placeholder="e.g. Credit card bill, ATM withdrawal, 10k top-up"></label><label class="f">Date & time<input id="a_date" type="datetime-local" value="${nowLocal()}"></label></div>
@@ -1017,7 +1025,7 @@ function submitAdd2(){
     V.f.touched = false; toast('Saved'); render();
   } else if(f.type==='income'){
     if(!desc) return toast('Who sent it?');
-    S.txns.push({ id:uid(), ts:tsFrom(mv('a_date')), type:'income', amount, desc, cat:'Family', to:mv('a_to') });
+    S.txns.push({ id:uid(), ts:tsFrom(mv('a_date')), type:'income', amount, desc, cat:'Family', to:mv('a_to'), app:mv('a_via') || '' });
     save(); toast('Saved'); render();
   } else {
     const from = mv('a_from'), to = mv('a_to');
