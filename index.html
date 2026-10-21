@@ -801,7 +801,10 @@ function tick(){ const d = new Date(); $('today').innerHTML = d.toLocaleDateStri
 setInterval(() => { if($('today')) tick(); }, 15000);
 function go(t){ V.tab = t; render(); scrollTo(0,0); }
 
-function rHome(){ return intrBanner() + rHome0(); }
+const welcomeBanner = () => S.welcomeSeen ? '' : `<div class="card" style="border-color:var(--accent)"><div class="eyebrow">Welcome</div><h2 style="margin:0">Welcome to TrackMe</h2><div class="sub">Made by <b>Koushik</b> for friends and family. Everything you enter stays on this phone: no account, no internet, nothing is sent to anyone.</div>
+  <div class="sub"><b>Koushik's advice:</b> back up now and then (Settings → Security &amp; privacy → Make encrypted backup) and keep the backup password safe, because nobody can recover it for you. Set an app PIN and a details passphrase. Install updates only from the official link, and don't forward the app file to others.</div>
+  <div class="row"><button class="pri" onclick="S.welcomeSeen=true;save();render()">Got it</button><button onclick="go('sec')">Open Security &amp; privacy</button></div></div>`;
+function rHome(){ return welcomeBanner() + intrBanner() + rHome0(); }
 function rHome0(){
   if(needsSetup()) return rWelcome();
   const real = S.accounts.filter(a => a.type!=='external' && a.type!=='invest' && !a.inactive);
@@ -1340,7 +1343,7 @@ function rSettings(){
   <div class="card"><h2>Investments & net worth PIN</h2><div class="sub">${S.invLock ? 'Investments and Net worth open only with their own PIN.' : 'Right now they use your app PIN. Set a separate PIN so only you can open them, even if someone knows your app PIN.'}</div>
     <div class="row">${S.invLock ? `<button onclick="invPinModal()">Change investments PIN</button><button class="bad" onclick="removeInvPin()">Remove</button>` : `<button class="pri" onclick="invPinModal()">Set investments PIN</button>`}</div></div>
   <div class="card"><h2>Notifications</h2><div class="sub">${NATIVE ? 'Phone notifications reach you even when the app is closed.' : 'Reminders show on Home. Phone notifications work in the Android app.'} ${notifEvents().length} coming up in the next 45 days.</div><button class="pri" onclick="go('notifs')">Open notification settings</button></div>
-  <div class="card"><h2>About</h2><div class="sub">${ED.name} ${V.appVer ? '· version ' + esc(V.appVer) : '· web version'}. Your data stays on this phone. Back it up now and then (Settings → Security &amp; privacy → Make encrypted backup).</div><button onclick="checkUpdate()">Get the newest version</button></div>
+  <div class="card"><h2>About</h2><div class="sub">Made by Koushik. ${ED.name} ${V.appVer ? '· version ' + esc(V.appVer) : '· web version'}. Your data stays on this phone. Back it up now and then (Settings → Security &amp; privacy → Make encrypted backup).</div><div class="row"><button onclick="checkUpdate()">Get the newest version</button><button onclick="S.welcomeSeen=false;save();go('home')">Show welcome message</button></div></div>
   <div class="card"><h2>Haptics</h2><div class="sub">A light vibration when cards snap, flip, stack and when you enter a PIN (Android phones).</div>
     <label class="ck"><input type="checkbox" ${S.haptics!==false?'checked':''} onchange="S.haptics=this.checked;save();if(this.checked)haptic(15)"><span>Vibrate on taps and card moves</span></label></div>
   <div class="card"><h2>Confirmation popups</h2><div class="sub">You are asked to confirm: reverting an entry, deleting anything, payments or transfers at or above the amount below, new autopay / EMI / monthly repayments, and showing private balances.</div>
