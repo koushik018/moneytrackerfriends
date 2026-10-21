@@ -67,6 +67,10 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
 - Add PayPal and tick the banks and cards linked to it. No payments or balance are tracked and it is not part of net worth; record the payment on the card or bank that was charged.
 - In India PayPal is for international payments only.
 
+## Upcoming costs and events (Plan → Upcoming)
+- Note anything coming up (trip, gift, fee, festival) with a date, an optional cost and a category. Totals for the next 30 days and 3 months, and what is left free after the next 30 days.
+- Each item has its own reminders: on the day, or 1, 2, 3, 5, 7 or 14 days before, any mix. They show on Home and as phone notifications (switch all off in Settings → Notifications). Mark Done when it has happened.
+
 ## Reminders, autopay, EMI, people
 - Monthly reminders (with an amount); "deposit and move it out again" reminders that tick themselves
   when the deposit is recorded.
