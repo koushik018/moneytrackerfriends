@@ -1,0 +1,100 @@
+name: TrackMe Android app
+
+on:
+  push:
+    branches: [main]
+    paths: ['index.html', 'app/**', 'icon-*.png', 'fonts/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-app
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: release   # optional: add yourself as a required reviewer in Settings > Environments to approve each build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Android SDK (already on the runner)
+        run: echo "sdk.dir=$ANDROID_HOME" && ls "$ANDROID_HOME/platforms" | tail -3
+
+      - name: Copy the web app into the Android project
+        run: |
+          mkdir -p app/www
+          cp index.html manifest.webmanifest icon.svg icon-192.png icon-512.png icon-maskable-512.png app/www/
+          cp -r fonts app/www/fonts
+
+      - name: Install Capacitor
+        working-directory: app
+        run: npm ci --no-audit --no-fund
+
+      - name: Create the Android project
+        working-directory: app
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: money
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH" || { echo "Signing secrets are missing"; exit 1; }
+          npx cap add android
+          npx cap sync android
+          pip install --quiet pillow
+          python3 tools/prepare.py ${{ github.run_number }}
+
+      - name: Build the APK
+        working-directory: app/android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: money
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Permission guard (fails the build if the app asks for anything it should not)
+        run: |
+          AAPT=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          APK=app/android/app/build/outputs/apk/debug/app-debug.apk
+          "$AAPT" dump permissions "$APK" | tee perms.txt
+          if grep -E "android.permission.(INTERNET|ACCESS_NETWORK_STATE|READ_SMS|RECEIVE_SMS|SEND_SMS|READ_CONTACTS|WRITE_CONTACTS|ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE|READ_PHONE_STATE|SYSTEM_ALERT_WINDOW|READ_CALL_LOG)" perms.txt; then echo "Forbidden permission found"; exit 1; fi
+          "$AAPT" dump badging "$APK" | grep -E "allowBackup|application-debuggable" || true
+          keytool -printcert -jarfile "$APK" | grep -E "SHA256|Owner"
+
+      - name: Name the APK
+        id: ver
+        run: |
+          VER=$(cat app/version.txt)
+          echo "ver=$VER" >> $GITHUB_OUTPUT
+          cp app/android/app/build/outputs/apk/debug/app-debug.apk "TrackMe-$VER-b${{ github.run_number }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TrackMe-apk
+          path: TrackMe-*.apk
+
+      - name: Publish to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-${{ steps.ver.outputs.ver }}-b${{ github.run_number }}
+          name: TrackMe ${{ steps.ver.outputs.ver }} (build ${{ github.run_number }})
+          body: |
+            Install on Android: download the .apk below, open it, allow "Install unknown apps" for your browser or Files app if asked.
+            Installing a newer version over the old one keeps all your data.
+          files: TrackMe-${{ steps.ver.outputs.ver }}-b${{ github.run_number }}.apk
+          make_latest: true

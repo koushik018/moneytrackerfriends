@@ -1,0 +1,9 @@
+{
+  "appId": "app.trackme.friends",
+  "appName": "TrackMe",
+  "webDir": "www",
+  "backgroundColor": "#0a0f0b",
+  "android": {
+    "allowMixedContent": false
+  }
+}
