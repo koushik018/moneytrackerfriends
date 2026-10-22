@@ -227,6 +227,18 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
   numbers and customer IDs are never put on a card.
 - Add or edit the details in Settings → Security & privacy → Open details.
 
+## Lent and owed: several accounts
+- When you record **I lent**, **I borrowed**, **They paid me back** or **I paid them back**, the account
+  part now has **+ Add another account**. Split an amount across banks, wallets or cash: for example
+  borrow ₹10,000 into two banks, or pay a lender back from two accounts. Each part is its own entry, and a
+  line shows how much is placed and how much is still to place; it will not save until they match.
+- Choose “No – just note it” if nothing moves in your accounts.
+
+## Withdraw charges
+- The Withdraw form on an investment platform has **Charges, if any**. It shows what you will get, keeps
+  the charges with money on the way, and records them as a small expense when the money arrives (or at once
+  when you pick Already there).
+
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
 - A daily snapshot builds the "over time" chart.

@@ -2147,8 +2147,8 @@ function pplModal(p){
   const as = S.accounts.filter(a => ['bank','cash','wallet'].includes(a.type) && !a.inactive), ms = S.methods.filter(m => !m.inactive && acc(m.accountId) && !acc(m.accountId).inactive);
   openModal('Lent / owed', `<label class="f">Person<input id="pp_n" data-free="1" value="${esc(p||'')}" list="pplist" placeholder="Name"></label><datalist id="pplist">${Object.keys(pplBal()).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
     <label class="f">What happened<select id="pp_a" onchange="$('pp_rep').style.display=this.value==='borrowed'?'block':'none'">${Object.keys(PA).map(k => `<option value="${k}">${PA[k][0]}</option>`).join('')}</select></label>
-    <div class="row"><label class="f">Amount (₹)<input id="pp_v" type="number" oninput="repayUI()"></label><label class="f">Date & time<input id="pp_d" type="datetime-local" value="${nowLocal()}"></label></div>
-    <label class="f">Move the money in an account? <select id="pp_acc"><option value="">No – just note it</option>${as.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></label>
+    <div class="row"><label class="f">Amount (₹)<input id="pp_v" type="number" inputmode="decimal" oninput="repayUI();ppSync()"></label><label class="f">Date & time<input id="pp_d" type="datetime-local" value="${nowLocal()}"></label></div>
+    <div style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow" style="font-size:.7rem">Which account?</span><span class="sub">Pick where the money goes or comes from. <b>Add another</b> splits it across several accounts.</span><div id="pp_rows" style="display:flex;flex-direction:column;gap:10px"></div><div><button class="sm" type="button" onclick="ppRowAdd()">+ Add another account</button></div><div class="sub" id="pp_rs"></div></div>
     <div id="pp_rep" style="display:none"><label class="ck"><input type="checkbox" id="pp_rc" onchange="$('pp_rb').style.display=this.checked?'block':'none';repayUI()"><span>I will repay this in monthly payments</span></label>
       <div id="pp_rb" style="display:none;margin-top:12px;display:none">
         <div class="row"><label class="f">Number of months<input id="pp_rn" type="number" min="1" max="120" value="6" oninput="repayUI()"></label><label class="f">First payment<input id="pp_rd" type="date" value="${ISO(new Date(new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate()))}"></label></div>
@@ -2158,8 +2158,22 @@ function pplModal(p){
         <label class="ck" style="margin-top:10px"><input type="checkbox" id="pp_rauto"><span>Autopay – record each payment by itself on its date</span></label></div></div>
     <label class="f">Note<input id="pp_note" placeholder="optional"></label>
     <div class="row"><button class="pri" onclick="savePpl()">Save</button><button onclick="closeModal()">Cancel</button></div>`);
+  V.ppEdit = 0; ppRowAdd(true);
 }
 V.rmode = 'equal'; V.rvals = [];
+/* the accounts a lent / borrowed / paid-back amount moves in: one row, or several to split it */
+function ppAccOpts(first){ return (first ? '<option value="">No – just note it</option>' : '') + S.accounts.filter(a => ['bank','cash','wallet'].includes(a.type) && !a.inactive).map(a => `<option value="${a.id}">${esc(a.name)} · ${inr(net(a.id))}</option>`).join(''); }
+function ppRowAdd(first){
+  const box = $('pp_rows'); if(!box) return; const n = box.children.length, done = [...box.querySelectorAll('.pp_rv')].reduce((x, i) => x + (parseFloat(i.value) || 0), 0), rest = Math.max(0, (parseFloat(mv('pp_v')) || 0) - done);
+  box.insertAdjacentHTML('beforeend', `<div class="row pp_row" style="align-items:flex-end"><label class="f">Account<select class="pp_ra" onchange="ppSync()">${ppAccOpts(n===0)}</select></label><label class="f" style="max-width:130px">Amount (₹)<input class="pp_rv" type="number" inputmode="decimal" value="${n ? (Math.round(rest*100)/100 || '') : ''}" oninput="V.ppEdit=1;ppSync()"></label>${n ? '<button class="sm ghost" type="button" aria-label="Remove" onclick="this.closest(\'.pp_row\').remove();V.ppEdit=1;ppSync()">×</button>' : ''}</div>`);
+  if(n) V.ppEdit = 1; if(!first) haptic(4); ppSync();
+}
+function ppSync(){
+  const rows = [...document.querySelectorAll('.pp_row')], tot = parseFloat(mv('pp_v')) || 0; if(!rows.length) return;
+  if(!V.ppEdit && rows.length===1) rows[0].querySelector('.pp_rv').value = tot || '';
+  const used = rows.filter(r => r.querySelector('.pp_ra').value), sum = used.reduce((x, r) => x + (parseFloat(r.querySelector('.pp_rv').value) || 0), 0), el = $('pp_rs'); if(!el) return;
+  el.innerHTML = !used.length ? 'Nothing moves in your accounts – it is only noted.' : Math.abs(sum - tot) < .01 ? `<span class="pos">${inr(sum)} placed – matches the amount</span>` : sum < tot ? `${inr(sum)} of ${inr(tot)} placed · <span class="neg">${inr(tot - sum)} still to place</span>` : `<span class="neg">${inr(sum - tot)} more than the amount</span>`;
+}
 function equalSplit(total, n){ const base = Math.floor(total / n * 100) / 100, out = Array(n).fill(base); out[n-1] = Math.round((total - base*(n-1)) * 100) / 100; return out; }
 function setRepayMode(m){ V.rmode = m; document.querySelectorAll('#pp_mode button').forEach(b => b.classList.toggle('on', (m==='equal') === /^Equal/.test(b.textContent))); repayUI(true); }
 function repayUI(keep){
@@ -2176,7 +2190,8 @@ function repaySum(){ const total = parseFloat(mv('pp_v')) || 0, sum = [...docume
   $('pp_sum').innerHTML = `Boxes add up to <b>${inr(sum)}</b> of <b>${inr(total)}</b> borrowed · ` + (d===0 ? '<span class="pos">matches</span>' : d>0 ? `<span class="neg">${inr(d)} more than borrowed</span>` : `<span class="neg">${inr(-d)} less than borrowed</span>`); }
 function savePpl(){
   const person = mv('pp_n').trim(), act = mv('pp_a'), v = parseFloat(mv('pp_v')); if(!person || !(v > 0)) return toast('Name and amount needed');
-  const ts = tsFrom(mv('pp_d')), a = mv('pp_acc'), note = mv('pp_note').trim();
+  const ts = tsFrom(mv('pp_d')), note = mv('pp_note').trim(), R = [...document.querySelectorAll('.pp_row')].map(r => ({ a:r.querySelector('.pp_ra').value, v:parseFloat(r.querySelector('.pp_rv').value) || 0 })).filter(r => r.a && r.v > 0), placed = R.reduce((x, r) => x + r.v, 0);
+  if(R.length && Math.abs(placed - v) > .01) return toast(`The accounts add up to ${inr(placed)} but the amount is ${inr(v)}`);
   let rep = null;
   if(act==='borrowed' && $('pp_rc').checked){
     const n = Math.max(1, Math.min(120, parseInt(mv('pp_rn')) || 0)), sched = V.rmode==='custom' ? [...document.querySelectorAll('.pp_bx')].map(x => parseFloat(x.value)) : equalSplit(v, n);
@@ -2185,10 +2200,10 @@ function savePpl(){
     if(!rep.start || !rep.methodId) return toast('Pick the first payment date and how you will pay');
   }
   const commit = withRepay => {
-    const e = { id:uid(), person, act, amt:PA[act][1]*v, ts, note };
-    if(a){ const out = act==='lent' || act==='iPaid', t = { id:uid(), ts, type: out ? 'expense' : 'income', amount:v, desc:`${PA[act][0]} – ${person}`, cat:'Family', ledger:true };
-      if(out) t.from = a; else t.to = a; S.txns.push(t); e.txnId = t.id; }
-    S.people.push(e);
+    (R.length ? R : [{ a:'', v }]).forEach((r, i) => { const e = { id:uid(), person, act, amt:PA[act][1]*r.v, ts:ts + i, note };
+      if(r.a){ const out = act==='lent' || act==='iPaid', t = { id:uid(), ts:ts + i, type: out ? 'expense' : 'income', amount:r.v, desc:`${PA[act][0]} – ${person}`, cat:'Family', ledger:true };
+        if(out) t.from = r.a; else t.to = r.a; S.txns.push(t); e.txnId = t.id; }
+      S.people.push(e); });
     if(withRepay && rep) S.fixed.push({ id:uid(), title:'Repay ' + person, amount:rep.sched[0], sched:rep.sched, emi:{ months:rep.months }, freq:'monthly', start:rep.start, auto:rep.auto, methodId:rep.methodId, cat:'Family', ppl:person, paid:{}, skip:{}, pops:{}, remindDays:5, remindTimes:1, trackFrom:rep.start });
     save(); closeModal(); render(); toast(withRepay && rep ? 'Saved with monthly repayment' : 'Saved');
   };
@@ -2380,19 +2395,22 @@ Object.assign(MARKS, {
 function moveModal(id, dir){
   const a = acc(id), banks = S.accounts.filter(x => ['bank','wallet','cash'].includes(x.type) && !x.inactive);
   openModal(dir==='out' ? `Withdraw from ${esc(a.name)}` : `Add money to ${esc(a.name)}`, `<div class="sub">${esc(a.name)} balance now: <b>${inr(net(id))}</b>${holdTotal(id) ? ` · on hold or on the way ${inr(holdTotal(id))} · free ${inr(net(id) - holdTotal(id))}` : ''}</div>
-    <label class="f">Amount (₹)<input id="mv_a" type="number" inputmode="decimal"></label>
+    <label class="f">Amount (₹)<input id="mv_a" type="number" inputmode="decimal" oninput="if($('mv_m'))mvMode(V.mvm)"></label>
     <label class="f">${dir==='out' ? 'To bank' : 'From bank'}<select id="mv_b">${banks.map(x => `<option value="${x.id}">${esc(x.name)} · ${inr(net(x.id))}</option>`).join('')}</select></label>
     ${dir==='out' && a.type==='invest' ? `<div class="f">When does it reach the bank?<div class="seg" id="mv_m">${[['now','Already there'],['std','Standard'],['inst','Instant']].map(([k, l]) => `<button type="button" class="${k==='std'?'on':''}" onclick="mvMode('${k}')">${l}</button>`).join('')}</div></div><div class="sub" id="mv_n"></div>` : ''}
+    ${dir==='out' && a.type==='invest' ? `<label class="f">Charges, if any (₹)<input id="mv_c" type="number" inputmode="decimal" placeholder="0" oninput="mvMode(V.mvm)"></label>` : ''}
     <label class="f" id="mv_dw">Date<input id="mv_d" type="datetime-local" value="${nowLocal()}"></label>
     <div class="row"><button class="pri" onclick="doMove('${id}','${dir}')">Save</button><button onclick="closeModal()">Cancel</button></div>`);
   if($('mv_m')) mvMode('std');
 }
-function mvMode(k){ V.mvm = k; document.querySelectorAll('#mv_m button').forEach((b, i) => b.classList.toggle('on', ['now','std','inst'][i]===k)); $('mv_dw').style.display = k==='now' ? '' : 'none'; $('mv_n').innerHTML = k==='now' ? 'Recorded as arrived.' : etaNote(k) + ' It is recorded when you tap <b>Arrived</b>.'; }
+function mvMode(k){ V.mvm = k; document.querySelectorAll('#mv_m button').forEach((b, i) => b.classList.toggle('on', ['now','std','inst'][i]===k)); $('mv_dw').style.display = k==='now' ? '' : 'none'; const fee = parseFloat(mv('mv_c')) || 0, amt = parseFloat(mv('mv_a')) || 0, net0 = fee > 0 && amt > fee ? ` You get <b>${inr(amt - fee)}</b>.` : ''; $('mv_n').innerHTML = (k==='now' ? 'Recorded as arrived.' : etaNote(k) + ' It is recorded when you tap <b>Arrived</b>.') + net0; }
 function doMove(id, dir){
   const amt = parseFloat(mv('mv_a')), b = mv('mv_b'), a = acc(id); if(!(amt > 0) || !b) return toast('Enter the amount and pick a bank');
   const free = net(id) - holdTotal(id); if(dir==='out' && amt > free + .004) return toast(`Only ${inr(free)} is free to withdraw – the rest is on hold or already on the way`);
-  if(dir==='out' && $('mv_m') && V.mvm!=='now'){ const x = mkTransit({ from:id, to:b, amount:amt, mode:V.mvm, exp:etaFor(V.mvm) }); save(); closeModal(); haptic(12); scheduleNotifs(); render(); return toast(`On the way to ${acc(b).name} – expected ${fdt(x.exp)}`); }
-  S.txns.push({ id:uid(), ts:tsFrom(mv('mv_d')), type:'transfer', amount:amt, desc: dir==='out' ? `Withdrawn from ${a.name}` : `Added to ${a.name}`, cat:'Other', from: dir==='out' ? id : b, to: dir==='out' ? b : id });
+  const fee = $('mv_c') ? (parseFloat(mv('mv_c')) || 0) : 0; if(fee >= amt && fee > 0) return toast('Charges must be less than the amount');
+  if(dir==='out' && $('mv_m') && V.mvm!=='now'){ const x = mkTransit({ from:id, to:b, amount:amt, fee, mode:V.mvm, exp:etaFor(V.mvm) }); save(); closeModal(); haptic(12); scheduleNotifs(); render(); return toast(`On the way to ${acc(b).name} – expected ${fdt(x.exp)}`); }
+  const tms = tsFrom(mv('mv_d')); S.txns.push({ id:uid(), ts:tms, type:'transfer', amount:amt, desc: dir==='out' ? `Withdrawn from ${a.name}` : `Added to ${a.name}`, cat:'Other', from: dir==='out' ? id : b, to: dir==='out' ? b : id });
+  if(fee > 0) S.txns.push({ id:uid(), ts:tms + 1, type:'expense', amount:fee, desc:'Withdrawal charges', cat:'Other', from:b });
   save(); closeModal(); haptic(12); render(); toast(dir==='out' ? `${inr(amt)} moved to ${acc(b).name}` : `${inr(amt)} added to ${a.name}`);
 }
 /* ---------- market holidays: shipped with the app (no internet) and editable ---------- */
