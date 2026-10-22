@@ -218,6 +218,15 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
 ## Home stack view
 - The last stacked card no longer overlaps the Online money / Cash in hand tiles.
 
+## Card and bank details on the card back
+- Flip a card (double-tap): its back shows one line from your **Details vault**: the last 4 digits,
+  expiry and network for debit and credit cards; the account last 4 digits, IFSC and branch for banks.
+- Shown only while the details vault is unlocked. Locked, the line shows **Unlock** (asks for the
+  details passphrase). It hides again after 5 minutes idle, when you leave the app, or on Lock.
+- Nothing is stored in the clear: the data stays inside the encrypted vault. UPI IDs, mobile
+  numbers and customer IDs are never put on a card.
+- Add or edit the details in Settings → Security & privacy → Open details.
+
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
 - A daily snapshot builds the "over time" chart.

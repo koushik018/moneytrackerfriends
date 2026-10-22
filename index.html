@@ -3015,6 +3015,7 @@ function accItem(a){
       lines.map(([l,u,max]) => bl(l, l.includes('taps') ? u + ' / ' + max : mi(u,a) + ' / ' + mi(max,a))).join('') + `</div>`); });
   if(a.type==='bank' && a.upiLimit) rows.push(`<div class="bk"><div class="bt">UPI daily limit</div>${bl('Used today', mi(upiUsed(a),a) + ' / ' + mi(a.upiLimit,a))}</div>`);
   const st = stmt(a); if(st) rows.push(`<div class="bk"><div class="bt">Billing</div>${bl('Statement day', a.billDay+'th')}${bl('Due day', a.dueDay+'th')}${bl('Minimum due', (a.minDuePct||10)+'%')}</div>`);
+  if(['bank','credit'].includes(a.type)) rows.unshift(dvBackHTML(dvKey(a.id), a.type==='credit' ? 'card' : 'bank'));
   if(a.note) rows.push(`<div class="bk"><div class="sub" style="color:inherit;opacity:.8">${esc(a.note)}</div></div>`);
   return { key:'acc:'+a.id, html: cw('acc:'+a.id, { br, cls:`${a.img?'img':''} ${a.inactive?'off':''} ${a.priv?'priv':''}`, style:palStyle(br, a), bg:a.img ? `background-image:url(${a.img});` : '',
     front:`<div class="top"><div><div class="nm">${esc(a.name)}</div><div class="ty">${TYPES[a.type]}${a.inactive?' · inactive':''}${a.priv?' · private':''}</div></div><div class="logo">${markA(a,34)}</div></div>
@@ -3032,7 +3033,7 @@ function debitItem(m){
     front:`<div class="top"><div><div class="nm">${esc(m.name)}</div><div class="ty">${esc(a.name)} · ${m.kind}${m.inactive||a.inactive?' · inactive':''}</div></div><div class="logo">${markA(a,34)}</div></div>
     <div style="display:flex;align-items:center;gap:12px"><div class="chipx"></div>${nfc}${r.pct ? `<span class="chip g" style="margin-left:auto">${r.pct}% cashback</span>` : ''}</div>
     <div class="bot">${use('Shop today', find('Shop')[1], L.pos)}${use('Online today', find('Online')[1], L.online)}${!L.pos && !L.online ? `<div class="meta"><span>No limits set</span></div>` : ''}</div>`,
-    back:backHead(m.name, br, a.name) + `<div class="bkw"><div class="bk"><div class="bt">Limits today</div>${lines.map(([l,u,max]) => bl(l, l.includes('taps') ? u + ' / ' + max : (l.includes('per tap') || l.startsWith('ATM') ? mi(max,a) : mi(u,a) + ' / ' + mi(max,a)))).join('') || '<div class="sub" style="color:inherit">None set – add them with Edit.</div>'}</div>
+    back:backHead(m.name, br, a.name) + `<div class="bkw">${dvBackHTML(dvKey(m.id, true), 'card')}<div class="bk"><div class="bt">Limits today</div>${lines.map(([l,u,max]) => bl(l, l.includes('taps') ? u + ' / ' + max : (l.includes('per tap') || l.startsWith('ATM') ? mi(max,a) : mi(u,a) + ' / ' + mi(max,a)))).join('') || '<div class="sub" style="color:inherit">None set – add them with Edit.</div>'}</div>
       <div class="bk"><div class="bt">Cashback</div>${r.pct ? bl('Rule', r.pct + '%' + (r.txnCap ? ' · max ' + inr(r.txnCap) + '/payment' : '') + (r.monthCap ? ' · ' + inr(r.monthCap) + '/month' : '')) + bl('Counts on', (r.modes||[]).map(x => MODES[x]).join(', ')) : '<div class="sub" style="color:inherit">No cashback rule.</div>'}</div>
       <div class="bk"><div class="bt">Linked account</div>${bl(esc(a.name), mi(net(a.id), a))}</div></div>` + backFoot(`<button class="sm" onclick="event.stopPropagation();methModal('${m.id}')">Edit</button>`) }) };
 }
@@ -3780,7 +3781,7 @@ async function dvCreate(pass){ const salt = rnd(16), key = await kdfKey(pass, sa
 async function dvOpen(pass){ const d = S.dv, key = await kdfKey(pass, UB64(d.salt), d.iter), data = JSON.parse(dec8(await aesD(key, d))); V.dv = { key, pass, data }; V.dvAt = Date.now(); }
 async function dvSave(){ const e = await aesE(V.dv.key, enc8(JSON.stringify(V.dv.data))); S.dv.iv = e.iv; S.dv.ct = e.ct; save(); V.dvAt = Date.now(); }
 function dvLockNow(){ V.dv = null; if(V.tab==='details') go('sec'); else render(); }
-function dvCheckIdle(){ if(V.dv && Date.now() - V.dvAt > 5*60000){ V.dv = null; if(V.tab==='details') render(); } }
+function dvCheckIdle(){ if(V.dv && Date.now() - V.dvAt > 5*60000){ V.dv = null; if(V.tab==='details') render(); else if(V.tab==='home') refreshWallet(); } }
 setInterval(dvCheckIdle, 30000);
 function dvEnsure(cb){
   if(!S.dv) return dvSetupModal(cb);
@@ -3817,6 +3818,16 @@ function dvEraseModal(){ ask('Erase the details vault?', 'All saved UPI IDs and 
 const dvAccs = () => S.accounts.filter(a => ['bank', 'credit', 'wallet', 'paypal'].includes(a.type));
 const dvCards = () => S.methods.filter(m => m.kind==='debit' && acc(m.accountId));
 const dvKey = (id, isM) => (isM ? 'm:' : 'a:') + id;
+/* last 4 digits, expiry, network, IFSC and branch on the back of a card – shown only while the details vault is unlocked, never stored in the clear */
+function dvBackHTML(key, kind){
+  const title = kind==='card' ? 'Card details' : 'Bank details';
+  if(!S.dv) return `<div class="bk">${bl(title, 'Set up in Security')}</div>`;
+  if(!V.dv) return `<div class="bk">${bl(title, `<button class="sm" onclick="event.stopPropagation();dvShowBack('${qs(key)}')">Unlock</button>`)}</div>`;
+  const rec = V.dv.data.a[key] || {};
+  if(kind==='card') return `<div class="bk">${rec.last4 || rec.exp || rec.net ? bl(rec.last4 ? '•••• ' + esc(rec.last4) : title, esc([rec.exp ? 'Exp ' + rec.exp : '', rec.net || ''].filter(Boolean).join(' · '))) : bl(title, 'Not saved yet')}</div>`;
+  return `<div class="bk">${rec.last4 || rec.ifsc ? bl(rec.last4 ? 'A/c •••• ' + esc(rec.last4) : title, esc(rec.ifsc || '')) : bl(title, 'Not saved yet')}${rec.branch ? bl('Branch', esc(rec.branch)) : ''}</div>`;
+}
+function dvShowBack(key){ dvEnsure(() => { refreshWallet(); setTimeout(() => { const w = cwEl(key.startsWith('m:') ? 'card:' + key.slice(2) : 'acc:' + key.slice(2)); if(w) w.classList.add('flip'); }, 40); }); }
 const NETS = ['', 'Visa', 'Mastercard', 'RuPay', 'Amex', 'Other'];
 function dvRows(rec, kind){
   const r = [], add = (l, v, cp) => { if(v) r.push([l, v, cp]); };
