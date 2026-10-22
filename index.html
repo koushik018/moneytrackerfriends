@@ -497,6 +497,11 @@ header h1 { min-width:0; overflow:hidden; white-space:nowrap; }
 .tl .st.now .dt { border-color:#f5b52e; box-shadow:inset 0 0 0 3px var(--solid), inset 0 0 0 9px #f5b52e; }
 .tl .st.now .nm2 { font-weight:500; }
 .tl .nm2 { font-size:.85rem; } .tl .dd { font-size:.72rem; color:var(--muted); }
+.stepper { display:flex; align-items:center; gap:6px; } .stepper input { width:64px; text-align:center; } .stepper .sm { min-width:34px; min-height:34px; font-size:.9rem; padding:0; }
+.tw { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:6px; } .tb { width:100%; border-collapse:collapse; font-size:.78rem; font-variant-numeric:tabular-nums; }
+.tb th { text-align:right; font-weight:500; color:var(--muted); font-size:.62rem; letter-spacing:.08em; text-transform:uppercase; padding:6px 6px; border-bottom:1px solid var(--border); white-space:nowrap; }
+.tb td { text-align:right; padding:7px 6px; border-bottom:1px solid var(--border); white-space:nowrap; } .tb th:first-child, .tb td:first-child { text-align:left; } .tb tr:last-child td { border-bottom:none; }
+details.scn > summary { padding:6px 0; }
 </style>
 </head>
 <body>
@@ -610,7 +615,7 @@ function dayIn(y, m, d, end){ const dt = new Date(y, m, Math.min(d, new Date(y, 
 const fdt = ts => { const d = new Date(ts); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) + ', ' + d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit',hour12:true}); };
 const masked = a => { if(a && a.type==='invest' && !V.invOk) return true; const rv = a && (V.reveal||{})[a.id]; if(rv===true) return false; if(rv===false) return true; return !!V.hideNow || !!(a && a.priv && a.type!=='invest'); };
 const mi = (n, a) => masked(a) ? '₹ ••••' : inr(n);
-const nowLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
+const nowLocal = t => { const d = t ? new Date(t) : new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
 const fdate = ts => new Date(ts).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
 function blank(){ return { v:2, userName:'', theme:'noir', accounts:[], methods:[], txns:[], plans:[], reminders:[], fixed:[], budgets:{}, cats:[], people:[], migrated:false }; }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save (storage full or blocked)'); } if(typeof queueSnap==='function') queueSnap(); if(typeof queueNotifs==='function') queueNotifs(); }
@@ -731,7 +736,15 @@ function alerts(){
   if(dim - today <= 5) S.methods.filter(m => !m.inactive && m.cb?.monthCap).forEach(m => { const l = capLeft(m, cm); if(l > 0) out.push({ lv:'blue', t:`${inr(l)} cashback cap unused on ${m.name}`, s:`${dim-today} day(s) left this month – use this card for eligible spends` }); });
   evList().filter(e => !e.done && e.date).forEach(e => { const dd = evDays(e), lead = Math.max(1, ...(e.lead || [1])); if(dd <= lead && dd >= -3) out.push({ lv: dd <= 0 ? 'red' : 'blue', t:`${e.title} ${evWhen(dd)}`, s:(e.amount ? inr(e.amount) + ' · ' : '') + fdate(new Date(e.date + 'T00:00:00')), act:`<button class="sm good" onclick="evDone('${e.id}')">Done</button>` }); });
   S.plans.filter(p => !p.done && p.due && new Date(p.due) - now < 3*864e5).forEach(p => out.push({ lv:'', t:`Planned: ${p.desc} ${inr(p.amount)}`, s:'Due ' + fdate(new Date(p.due)) }));
-  (S.ipos || []).filter(o => o.status==='pending').forEach(o => { const t = ISO(now); if(o.allot && o.allot <= t) out.push({ lv: o.unblock && o.unblock < t ? 'red' : '', t:`IPO allotment: ${o.name}`, s: `${inr(o.amount)} on hold in ${acc(o.from)?.name || 'your account'}. ` + (o.allot===t ? 'Allotment is today – check your app.' : 'Allotment is out.') + ` Funds are debited (allotted) or unblocked (not allotted) on ${o.unblock ? fdate(new Date(o.unblock + 'T00:00:00')) : 'the unblock day'}.`, act:`<button class="sm good" onclick="ensureInvest(()=>ipoResult('${o.id}','ask'))">Allotted</button> <button class="sm" onclick="ensureInvest(()=>ipoResult('${o.id}',0))">Not allotted</button>` }); });
+  { const t = ISO(now), E = id => `ensureInvest(()=>${id})`;
+    trList().filter(x => x.exp <= now.getTime() + 36e5).forEach(x => out.push({ lv: x.exp < now.getTime() - 864e5 ? 'red' : 'blue', t:`Money on the way: ${trName(x)}`, s:`${inr(x.amount - (x.fee || 0))} · expected ${fdt(x.exp)}. Did it reach your bank?`, act:`<button class="sm good" onclick="arriveModal('${x.id}')">Arrived</button> <button class="sm" onclick="trLater('${x.id}')">Not yet</button>` }));
+    (S.ipos || []).forEach(o => {
+      if(o.status==='planned' && o.open && o.open <= t && (!o.close || o.close >= t)){ const sh = ipoNeed(o) - freeOf(o.from); out.push({ lv: o.close===t ? 'red' : 'blue', t:`IPO ${o.close===t ? 'closes today' : 'open'}: ${o.name}`, s:`Needs ${inr(ipoNeed(o))} in ${acc(o.from)?.name || 'your bank'}. ` + (sh > .004 ? `Short by ${inr(sh)} right now.` : 'You have enough free.'), act:`<button class="sm good" onclick="${E(`ipoApply('${o.id}')`)}">Apply now</button>${sh > .004 ? ` <button class="sm" onclick="${E(`fundModal('${o.id}',1)`)}">Find the money</button>` : ''}` }); }
+      if(o.status==='pending' && o.allot && o.allot <= t) out.push({ lv: o.unblock && o.unblock < t ? 'red' : '', t:`IPO allotment: ${o.name}`, s: `${inr(o.amount || ipoNeed(o))} on hold in ${acc(o.from)?.name || 'your account'}. ` + (o.allot===t ? 'Allotment is today – check your app. It can come a day late.' : 'Allotment is out.') + ` Debit or release on ${o.unblock ? fdate(new Date(o.unblock + 'T00:00:00')) : 'the unblock day'}.`, act:`<button class="sm good" onclick="${E(`ipoResultModal('${o.id}')`)}">Mark result</button>` });
+      if(o.status==='result' && (!o.unblock || o.unblock <= t) && (!o.late || o.late <= t)) out.push({ lv:'blue', t:`IPO money: ${o.name}`, s:o.res && o.res.debit ? `${inr(o.res.debit)} should be debited today and the rest released. Did the bank do it?` : 'The blocked money should be released today. Did the bank do it?', act:`<button class="sm good" onclick="${E(`ipoSettleModal('${o.id}')`)}">Confirm</button>` });
+      if(leftOf(o) > .5 && o.settled && now.getTime() - o.settled < 14*864e5) out.push({ lv:'', t:`IPO leftover: ${o.name}`, s:`${inr(leftOf(o))} of the money you brought in is free again.`, act:`<button class="sm" onclick="${E(`leftModal('${o.id}')`)}">Put it back</button>` });
+      if(o.listing===t && ['allotted','pending','result'].includes(o.status) && now.getHours() < 16) out.push({ lv:'blue', t:`${o.name} lists today`, s:'Listing at 10:00. Check Groww to trade or keep.' });
+    }); }
   S.accounts.filter(a => a.type==='invest' && a.raa && a.raa.cycle!=='off' && a.raa.next).forEach(a => { const r = a.raa, days = Math.round((new Date(r.next + 'T00:00:00') - new Date(ISO(now) + 'T00:00:00')) / 864e5), free = raaFree(a);
     if(days < 0 && free <= 0.004){ const step = r.cycle==='quarterly' ? 3 : 1; while(r.next < ISO(now)) r.next = addMonths(r.next, step); save(); return; }
     if(days <= 2 && free > 0.004) out.push({ lv: days < 0 ? 'red' : 'blue', t:`${a.name} auto-refund ${days < 0 ? 'was due' : days===0 ? 'today' : 'in ' + days + ' day(s)'}`, s:`Unused balance goes back to ${acc(r.bank)?.name || 'your primary bank'} on ${fdate(new Date(r.next + 'T00:00:00'))}. Keep it there only if you will trade or apply for an IPO before then.`, act:`<button class="sm good" onclick="ensureInvest(()=>raaRecord('${a.id}'))">Record refund</button>` }); });
@@ -797,6 +810,7 @@ function render(){
   if(V.tab==='add') refreshSuggest();
   if(V.tab==='home') wireWallet();
   if(V.tab==='plan' && V.pt==='calc') calcUpdate();
+  if(V.pendArr){ const p = V.pendArr; V.pendArr = null; setTimeout(() => p.later ? trLater(p.tid) : arriveModal(p.tid), 250); }
 }
 function tick(){ const d = new Date(); $('today').innerHTML = d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'}) + '<br>' + d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit',hour12:true}); }
 setInterval(() => { if($('today')) tick(); }, 15000);
@@ -2119,7 +2133,7 @@ function rdValue(M, ratePct, months, start, now = new Date(), comp = 4, amts){
 const HTYPES = { stocks:'Stocks', mf:'Mutual funds', gold:'Digital gold', fd:'Fixed deposit (FD)', rd:'Recurring deposit (RD)', bond:'Bonds', other:'Other' };
 const holdingValue = (h, now) => h.type==='fd' ? fdValue(+h.principal, +h.rate, +h.months, h.start, now, h.comp ?? 4) : h.type==='rd' ? rdValue(+h.monthly, +h.rate, +h.months, h.start, now, h.comp ?? 4, h.amts) : (+h.value || 0);
 const holdingInvested = (h, now) => h.type==='fd' ? +h.principal : h.type==='rd' ? rdInvested(h, now) : (+h.invested || 0);
-function holdTotal(id){ return S.txns.filter(t => t.type==='hold' && !t.released && !t.reverted && t.from===id).reduce((x,t) => x + t.amount, 0); }
+function holdTotal(id){ return S.txns.filter(t => t.type==='hold' && !t.released && !t.reverted && t.from===id).reduce((x,t) => x + t.amount, 0) + (S.transit || []).filter(x => !x.done && !x.hold && x.from===id).reduce((s, x) => s + x.amount, 0); }   // IPO holds + withdrawals already asked for (money on the way)
 const invValue = (a, now) => net(a.id) + (a.holdings || []).reduce((x,h) => x + holdingValue(h, now), 0);   // cash + money on hold for IPOs + holdings
 const invInvested = (a, now) => net(a.id) + (a.holdings || []).reduce((x,h) => x + holdingInvested(h, now), 0);
 const matTxt = h => h.start ? fdate(maturityOf(h)) : 'when you start it';
@@ -2146,65 +2160,396 @@ Object.assign(MARKS, {
 /* move money between an investment platform (Groww …) and a bank: withdraw to bank, or add money from bank */
 function moveModal(id, dir){
   const a = acc(id), banks = S.accounts.filter(x => ['bank','wallet','cash'].includes(x.type) && !x.inactive);
-  openModal(dir==='out' ? `Withdraw from ${esc(a.name)}` : `Add money to ${esc(a.name)}`, `<div class="sub">${esc(a.name)} balance now: <b>${inr(net(id))}</b>${holdTotal(id) ? ` · on hold for IPOs ${inr(holdTotal(id))} · free ${inr(net(id) - holdTotal(id))}` : ''}</div>
+  openModal(dir==='out' ? `Withdraw from ${esc(a.name)}` : `Add money to ${esc(a.name)}`, `<div class="sub">${esc(a.name)} balance now: <b>${inr(net(id))}</b>${holdTotal(id) ? ` · on hold or on the way ${inr(holdTotal(id))} · free ${inr(net(id) - holdTotal(id))}` : ''}</div>
     <label class="f">Amount (₹)<input id="mv_a" type="number" inputmode="decimal"></label>
     <label class="f">${dir==='out' ? 'To bank' : 'From bank'}<select id="mv_b">${banks.map(x => `<option value="${x.id}">${esc(x.name)} · ${inr(net(x.id))}</option>`).join('')}</select></label>
-    <label class="f">Date<input id="mv_d" type="datetime-local" value="${nowLocal()}"></label>
+    ${dir==='out' && a.type==='invest' ? `<div class="f">When does it reach the bank?<div class="seg" id="mv_m">${[['now','Already there'],['std','Standard'],['inst','Instant']].map(([k, l]) => `<button type="button" class="${k==='std'?'on':''}" onclick="mvMode('${k}')">${l}</button>`).join('')}</div></div><div class="sub" id="mv_n"></div>` : ''}
+    <label class="f" id="mv_dw">Date<input id="mv_d" type="datetime-local" value="${nowLocal()}"></label>
     <div class="row"><button class="pri" onclick="doMove('${id}','${dir}')">Save</button><button onclick="closeModal()">Cancel</button></div>`);
+  if($('mv_m')) mvMode('std');
 }
+function mvMode(k){ V.mvm = k; document.querySelectorAll('#mv_m button').forEach((b, i) => b.classList.toggle('on', ['now','std','inst'][i]===k)); $('mv_dw').style.display = k==='now' ? '' : 'none'; $('mv_n').innerHTML = k==='now' ? 'Recorded as arrived.' : etaNote(k) + ' It is recorded when you tap <b>Arrived</b>.'; }
 function doMove(id, dir){
   const amt = parseFloat(mv('mv_a')), b = mv('mv_b'), a = acc(id); if(!(amt > 0) || !b) return toast('Enter the amount and pick a bank');
-  const free = net(id) - holdTotal(id); if(dir==='out' && amt > free + .004) return toast(`Only ${inr(free)} is free to withdraw – the rest is on hold for an IPO`);
+  const free = net(id) - holdTotal(id); if(dir==='out' && amt > free + .004) return toast(`Only ${inr(free)} is free to withdraw – the rest is on hold or already on the way`);
+  if(dir==='out' && $('mv_m') && V.mvm!=='now'){ const x = mkTransit({ from:id, to:b, amount:amt, mode:V.mvm, exp:etaFor(V.mvm) }); save(); closeModal(); haptic(12); scheduleNotifs(); render(); return toast(`On the way to ${acc(b).name} – expected ${fdt(x.exp)}`); }
   S.txns.push({ id:uid(), ts:tsFrom(mv('mv_d')), type:'transfer', amount:amt, desc: dir==='out' ? `Withdrawn from ${a.name}` : `Added to ${a.name}`, cat:'Other', from: dir==='out' ? id : b, to: dir==='out' ? b : id });
   save(); closeModal(); haptic(12); render(); toast(dir==='out' ? `${inr(amt)} moved to ${acc(b).name}` : `${inr(amt)} added to ${a.name}`);
 }
-/* IPO: the amount is blocked (on hold) from Groww or your bank until allotment; allotted -> debited and becomes shares, not allotted -> released */
-function ipoModal(platId){
-  const plat = acc(platId) || acc(growwId()) || null, platName = plat ? plat.name : 'Groww';
-  const srcs = (plat ? [plat] : []).concat(S.accounts.filter(x => ['bank','wallet'].includes(x.type) && !x.inactive)), defSrc = (plat && plat.raa && plat.raa.bank) || (S.accounts.find(x => x.type==='bank' && !x.inactive) || {}).id || (plat && plat.id), d = n => ISO(new Date(Date.now() + n*864e5));
-  openModal('Apply for IPO', `<div class="sub">Put in the dates from the IPO page (Schedule). Like your bank shows it, the balance stays the same but the amount is <b>on hold</b> – not free to spend. On the funds unblock / debit day: allotted → it is debited and becomes shares in ${esc(platName)}; not allotted → the hold is released.</div>
-    <label class="f">IPO name<input id="ip_n" placeholder="e.g. Tonbo Imaging"></label>
-    <div class="row"><label class="f">Amount blocked (₹)<input id="ip_a" type="number" inputmode="decimal"></label><label class="f">Money from<select id="ip_f">${srcs.map(x => `<option value="${x.id}" ${x.id===defSrc?'selected':''}>${esc(x.name)} · ${inr(net(x.id) - holdTotal(x.id))} free${x.type==='invest' ? '' : ' (UPI block)'}</option>`).join('')}</select></label></div>
+/* ---------- market holidays: shipped with the app (no internet) and editable ---------- */
+const HOL_DEF = { '2026-01-26':'Republic Day', '2026-03-03':'Holi', '2026-03-26':'Shri Ram Navami', '2026-03-31':'Shri Mahavir Jayanti', '2026-04-03':'Good Friday', '2026-04-14':'Dr. Baba Saheb Ambedkar Jayanti', '2026-05-01':'Maharashtra Day', '2026-05-28':'Bakri Id', '2026-06-26':'Muharram', '2026-09-14':'Ganesh Chaturthi', '2026-10-02':'Mahatma Gandhi Jayanti', '2026-10-20':'Dussehra', '2026-11-10':'Diwali Balipratipada', '2026-11-24':'Prakash Gurpurb Sri Guru Nanak Dev', '2026-12-25':'Christmas' };
+function holMap(){ const h = S.hol || {}, m = Object.assign({}, HOL_DEF, h.add || {}); (h.off || []).forEach(d => delete m[d]); return m; }
+const workDay = (d, H = holMap()) => d.getDay()!==0 && d.getDay()!==6 && !H[ISO(d)];
+function nextWork(d){ const H = holMap(), x = dateOnly(new Date(d)); do x.setDate(x.getDate() + 1); while(!workDay(x, H)); return x; }
+function addWork(d, n){ let x = new Date(d); for(let i = 0; i < Math.max(1, n); i++) x = nextWork(x); return x; }
+const inMarket = t => { const d = new Date(t), m = d.getHours()*60 + d.getMinutes(); return workDay(d) && m >= 555 && m <= 930; };
+/* Groww standard withdrawal: processed the next working day, around 10–11 am. Instant: about 5 minutes */
+function etaFor(mode, t = Date.now(), days = 1){ if(mode==='inst') return t + 5*6e4; const x = addWork(new Date(t), mode==='std' ? 1 : days); x.setHours(11, 0, 0, 0); return x.getTime(); }
+const etaNote = (mode, t = Date.now()) => mode==='inst' ? 'Instant: about 5 minutes. It cannot be cancelled and may have a small fee.' : `Standard: processed the next working day, around 10–11 am → <b>${fdt(etaFor('std', t))}</b>.${inMarket(t) ? ' Asked during market hours, so it may also arrive sooner.' : ''} Weekends and market holidays are skipped.`;
+function holModal(){
+  const m = holMap(), yrs = [...new Set(Object.keys(m).map(d => d.slice(0, 4)))].sort(), t = ISO(new Date());
+  openModal('Market holidays', `<div class="sub">Used to work out when money arrives (withdrawals and sales settle on working days only). The app has no internet, so this list comes with each update. Add or remove days if your bank or the exchange changes them.</div>
+    ${yrs.map(y => `<div class="eyebrow" style="margin-top:8px">${y}</div><div class="list">${Object.keys(m).filter(d => d.startsWith(y)).sort().map(d => `<div class="item ${d < t ? 'rev' : ''}" style="padding:9px 2px"><div class="l"><div class="t">${esc(m[d])}</div><div class="sub">${new Date(d + 'T00:00:00').toLocaleDateString('en-IN',{ weekday:'short', day:'numeric', month:'short' })}</div></div><button class="sm ghost" onclick="holDel('${d}')" aria-label="Remove">×</button></div>`).join('')}</div>`).join('')}
+    ${yrs.includes('2027') ? '' : '<div class="sub">The 2027 list is usually announced in December. Add the dates here, or update the app when it is out.</div>'}
+    <div class="row"><label class="f">Date<input id="hl_d" type="date"></label><label class="f">Name<input id="hl_n" placeholder="e.g. Bank holiday"></label></div>
+    <div class="row"><button class="pri" onclick="holAdd()">Add holiday</button>${S.hol ? '<button onclick="S.hol=null;save();holModal()">Restore the list</button>' : ''}<button class="ghost" onclick="closeModal()">Close</button></div>`);
+}
+function holAdd(){ const d = mv('hl_d'), n = mv('hl_n').trim() || 'Holiday'; if(!d) return toast('Pick a date'); S.hol = S.hol || {}; S.hol.add = Object.assign(S.hol.add || {}, { [d]:n }); S.hol.off = (S.hol.off || []).filter(x => x!==d); save(); holModal(); scheduleNotifs(); }
+function holDel(d){ S.hol = S.hol || {}; if(S.hol.add) delete S.hol.add[d]; if(HOL_DEF[d]) S.hol.off = [...new Set((S.hol.off || []).concat(d))]; save(); holModal(); scheduleNotifs(); }
+
+/* ---------- money on the way: a withdrawal or sale that lands in a bank later ---------- */
+const trList = () => (S.transit || []).filter(x => !x.done);
+const freeOf = id => net(id) - holdTotal(id);
+const trName = x => `${x.hold ? (x.hold.name || 'Investment') : acc(x.from)?.name || '?'} → ${acc(x.to)?.name || '?'}`;
+function mkTransit(o){ const x = Object.assign({ id:uid(), made:Date.now(), fee:0 }, o); S.transit = (S.transit || []).concat(x); return x; }
+function trSelOpts(sel, kinds = ['bank','wallet','cash']){ return S.accounts.filter(a => kinds.includes(a.type) && !a.inactive).map(a => `<option value="${a.id}" ${a.id===sel?'selected':''}>${esc(a.name)}</option>`).join(''); }
+function transitModal(id){
+  const x = id ? (S.transit || []).find(y => y.id===id) : { from:growwId(), mode:'std', amount:'', fee:0 }, invs = S.accounts.filter(a => a.type==='invest' && !a.inactive);
+  if(!x) return;
+  openModal(id ? 'Money on the way' : 'Add money on the way', `<div class="sub">Money that leaves one place now and lands in your bank later – a Groww withdrawal, a sale (T+1), an FD or fund redemption. It counts in your forecasts on the expected date, and you get a notification with an <b>Arrived</b> button. Nothing changes in your balances until it arrives.</div>
+    ${x.hold ? `<div class="item"><span>${esc(x.hold.name || 'Investment')}</span><b>${inr(x.hold.gross)}</b></div>` : `<label class="f">From<select id="tr_f">${trSelOpts(x.from, ['invest','bank','wallet'])}</select></label>`}
+    <div class="row"><label class="f">Amount (₹)<input id="tr_a" type="number" inputmode="decimal" value="${x.amount}"></label><label class="f">Charges (₹)<input id="tr_c" type="number" inputmode="decimal" value="${x.fee || ''}" placeholder="0"></label></div>
+    <label class="f">To<select id="tr_t">${trSelOpts(x.to || (S.accounts.find(a => a.type==='bank' && !a.inactive) || {}).id)}</select></label>
+    <div class="f">How fast<div class="seg" id="tr_m">${[['std','Standard'],['inst','Instant'],['custom','My own date']].map(([k, l]) => `<button type="button" class="${(x.mode||'std')===k?'on':''}" onclick="trMode('${k}')">${l}</button>`).join('')}</div></div>
+    <label class="f" id="tr_cw">Expected<input id="tr_e" type="datetime-local" value="${x.exp ? nowLocal(x.exp) : nowLocal(etaFor('std'))}"></label>
+    <div class="sub" id="tr_n"></div>
+    <div class="row"><button class="pri" onclick="trSave('${id||''}')">Save</button>${id ? `<button class="good" onclick="arriveModal('${id}')">Arrived</button><button class="bad" onclick="trDel('${id}')">Delete</button>` : ''}<button onclick="closeModal()">Cancel</button></div>`);
+  V.trm = x.mode || 'std'; trMode(V.trm, !!x.exp);
+}
+function trMode(k, keep){ V.trm = k; document.querySelectorAll('#tr_m button').forEach((b, i) => b.classList.toggle('on', ['std','inst','custom'][i]===k));
+  if(!keep && k!=='custom') $('tr_e').value = nowLocal(etaFor(k)); $('tr_n').innerHTML = k==='custom' ? 'Pick the date and time it should arrive.' : etaNote(k); }
+function trSave(id){
+  const amt = parseFloat(mv('tr_a')), fee = parseFloat(mv('tr_c')) || 0, to = mv('tr_t'), exp = tsFrom(mv('tr_e')); if(!(amt > 0) || !to) return toast('Enter the amount and where it goes');
+  if(fee >= amt) return toast('Charges must be less than the amount');
+  let x = id && (S.transit || []).find(y => y.id===id);
+  if(!x){ const from = mv('tr_f'); if(from===to) return toast('From and To are the same'); if(amt > freeOf(from) + .004 && acc(from)) return toast(`${acc(from).name} has only ${inr(freeOf(from))} free`); x = mkTransit({ from }); }
+  Object.assign(x, { amount:amt, fee, to, mode:V.trm, exp }); save(); closeModal(); scheduleNotifs(); render(); toast(`Expected ${fdt(exp)}`);
+}
+function trDel(id){ ask('Delete this?', 'Nothing was recorded yet, so your balances do not change.', 'Delete', () => { S.transit = (S.transit || []).filter(x => x.id!==id); save(); closeModal(); scheduleNotifs(); render(); }, true); }
+function arriveModal(id){
+  const x = (S.transit || []).find(y => y.id===id); if(!x || x.done) return;
+  openModal('Did it arrive?', `<div class="sub">${esc(trName(x))} · expected ${fdt(x.exp)}. Check your bank app, then confirm. It is recorded as a move between your own accounts${x.fee ? ', and the charges as a small expense' : ''} – your net worth does not change${x.fee ? ' except for the charges' : ''}.</div>
+    <div class="row"><label class="f">Amount received (₹)<input id="ar_a" type="number" inputmode="decimal" value="${Math.round((x.amount - (x.fee || 0))*100)/100}"></label><label class="f">In<select id="ar_t">${trSelOpts(x.to)}</select></label></div>
+    <label class="f">When<input id="ar_d" type="datetime-local" value="${nowLocal()}"></label>
+    <div class="row"><button class="pri good" onclick="arriveSave('${id}')">Yes, it arrived</button><button onclick="trLater('${id}')">Not yet</button></div>`);
+}
+function arriveSave(id){
+  const x = (S.transit || []).find(y => y.id===id), got = parseFloat(mv('ar_a')), to = mv('ar_t'), ts = tsFrom(mv('ar_d')); if(!x || !(got > 0)) return toast('Enter the amount that arrived');
+  const fee = Math.max(0, Math.round((x.amount - got)*100)/100), gross = got + fee, desc = x.hold ? `${x.hold.name || 'Investment'} withdrawn` : `Withdrawn from ${acc(x.from)?.name || '?'}`;
+  if(x.hold){ const a = acc(x.hold.plat), h = a && (a.holdings || []).find(y => y.id===x.hold.hid);
+    if(h){ const now = new Date(), v = holdingValue(h, now) || 1;
+      if(x.hold.full || gross >= v - .5) a.holdings = a.holdings.filter(y => y!==h);
+      else { const k = Math.max(0, 1 - x.hold.gross / v); if(h.type==='fd') h.principal = Math.round(+h.principal * k * 100)/100; else if(h.type==='rd'){ h.monthly = Math.round(+h.monthly * k * 100)/100; if(h.amts) h.amts = h.amts.map(z => Math.round(z * k * 100)/100); } else { h.invested = Math.round((+h.invested || 0) * k * 100)/100; h.value = Math.round(((+h.value || 0) - x.hold.gross) * 100)/100; h.valueAt = ISO(now); } } }
+    S.txns.push({ id:uid(), ts, type:'income', amount:gross, desc, cat:'Other', to, ledger:true, transit:id }); }
+  else S.txns.push({ id:uid(), ts, type:'transfer', amount:gross, desc, cat:'Other', from:x.from, to, transit:id });
+  if(fee > 0) S.txns.push({ id:uid(), ts:ts + 1, type:'expense', amount:fee, desc:'Withdrawal charges', cat:'Other', from:to, transit:id });
+  x.done = true; x.doneAt = ts; x.got = got; x.to = to; save(); closeModal(); haptic([8,30,12]); scheduleNotifs(); render(); toast(`${inr(got)} arrived in ${acc(to)?.name || 'your bank'}`);
+}
+function trLater(id){ const x = (S.transit || []).find(y => y.id===id); if(!x) return; const n = nextWork(new Date()); n.setHours(11, 0, 0, 0); x.exp = n.getTime(); x.late = (x.late || 0) + 1; save(); closeModal(); scheduleNotifs(); render(); toast(`OK – I will ask again ${fdt(x.exp)}`); }
+/* sell or redeem a holding (FD, fund, gold, shares) into a bank */
+function redeemModal(platId){
+  const a = acc(platId), hs = (a && a.holdings || []).filter(h => holdingValue(h, new Date()) > 0); if(!hs.length) return toast('No holdings here yet');
+  openModal(`Withdraw from ${esc(a.name)} holdings`, `<div class="sub">Sell shares, redeem a fund or gold, or break an FD. Shares settle T+1 (next working day); funds and FDs take the days you set. It is recorded only when it reaches your bank.</div>
+    <label class="f">Holding<select id="rd_h" onchange="rdUI()">${hs.map(h => `<option value="${h.id}">${esc(h.name || HTYPES[h.type])} · ${inr(holdingValue(h, new Date()))}</option>`).join('')}</select></label>
+    <div class="f">How much<div class="seg" id="rd_k"><button type="button" class="on" onclick="rdKind(1)">All of it</button><button type="button" onclick="rdKind(0)">Part of it</button></div></div>
+    <div class="row"><label class="f">Amount (₹)<input id="rd_a" type="number" inputmode="decimal" oninput="rdUI(1)"></label><label class="f">Charges (₹)<input id="rd_c" type="number" inputmode="decimal" placeholder="0" oninput="rdUI(1)"></label></div>
+    <div class="row"><label class="f">Working days to arrive<input id="rd_w" type="number" min="1" max="15" value="1" oninput="rdUI(1)"></label><label class="f">To bank<select id="rd_t">${trSelOpts((a.raa && a.raa.bank) || '')}</select></label></div>
+    <div class="sub" id="rd_n"></div>
+    <div class="row"><button class="pri" onclick="rdSave('${platId}')">Save</button><button onclick="closeModal()">Cancel</button></div>`);
+  V.rdFull = 1; rdUI();
+}
+function rdKind(f){ V.rdFull = f; document.querySelectorAll('#rd_k button').forEach((b, i) => b.classList.toggle('on', i===(f ? 0 : 1))); rdUI(); }
+function rdUI(typed){
+  const h = rdHolding(); if(!h) return; const v = holdingValue(h, new Date());
+  if(!typed){ $('rd_a').value = V.rdFull ? Math.round(v*100)/100 : ''; $('rd_a').readOnly = !!V.rdFull; $('rd_w').value = { stocks:1, mf:3, gold:2, fd:1, rd:1, bond:2 }[h.type] || 2; }
+  const amt = parseFloat(mv('rd_a')) || 0, fee = parseFloat(mv('rd_c')) || 0, eta = etaFor('days', Date.now(), parseInt(mv('rd_w')) || 1);
+  $('rd_n').innerHTML = amt ? `You get <b>${inr(Math.max(0, amt - fee))}</b> around <b>${fdt(eta)}</b>.${amt > v + .5 ? ' <span class="neg">More than its value.</span>' : ''}` : '';
+}
+function rdHolding(){ const id = mv('rd_h'); for(const a of S.accounts) for(const h of (a.holdings || [])) if(h.id===id){ V.rdPlat = a.id; return h; } return null; }
+function rdSave(platId){
+  const h = rdHolding(), amt = parseFloat(mv('rd_a')), fee = parseFloat(mv('rd_c')) || 0, to = mv('rd_t'); if(!h || !(amt > 0) || !to) return toast('Enter the amount and the bank');
+  if(fee >= amt) return toast('Charges must be less than the amount'); const v = holdingValue(h, new Date()); if(amt > v + .5) return toast(`It is worth ${inr(v)}`);
+  const x = mkTransit({ from:platId, to, amount:amt, fee, mode:'days', exp:etaFor('days', Date.now(), parseInt(mv('rd_w')) || 1), hold:{ plat:platId, hid:h.id, name:h.name || HTYPES[h.type], gross:amt, full:!!V.rdFull } });
+  save(); closeModal(); scheduleNotifs(); render(); toast(`On the way – expected ${fdt(x.exp)}`); return x;
+}
+function trListHTML(){
+  const L = trList().sort((a, b) => a.exp - b.exp); if(!L.length) return '';
+  return `<div class="eyebrow" style="margin-top:6px">Money on the way</div><div class="card" style="padding:6px 14px"><div class="list">${L.map(x => `<div class="item"><div class="l"><div class="t">${esc(trName(x))}</div><div class="sub">${x.exp <= Date.now() ? '<span class="neg">Expected ' + fdt(x.exp) + '</span>' : 'Expected ' + fdt(x.exp)}${x.mode==='inst' ? ' · instant' : ''}${x.fee ? ' · charges ' + inr(x.fee) : ''}</div></div><div class="r"><div>${mi(x.amount - (x.fee || 0))}</div><span><button class="sm good" onclick="arriveModal('${x.id}')">Arrived</button> <button class="sm ghost" onclick="transitModal('${x.id}')">Edit</button></span></div></div>`).join('')}</div></div>`;
+}
+
+/* ---------- IPOs: plan, bid (several bids per IPO), funds check, result per bid, leftovers ---------- */
+const ICAT = { reg:['Regular (retail)', 200000], emp:['Employee', 500000], sh:['Shareholder', 200000], hni:['High Networth Individual (HNI)', 500000] }, HNI_MIN = 200000;
+const ipoLim = (o, c) => +((o.lim || {})[c] ?? ICAT[c][1]);
+const bidPx = (o, b) => b.cutoff ? +o.hi : +b.price;
+const bidAmt = (o, b) => (+b.lots || 0) * (+o.lot || 0) * (bidPx(o, b) || 0);
+const ipoNeed = o => o.bids ? o.bids.reduce((x, b) => x + bidAmt(o, b), 0) : +o.amount || 0;
+const ipoLots = o => o.bids ? o.bids.reduce((x, b) => x + (+b.lots || 0), 0) : 0;
+const fD = x => x ? fdate(new Date(x + 'T00:00:00')) : '—';
+/* free money in a bank on a date: free now + money on the way that lands by then */
+function freeOn(id, date){ const end = new Date(date + 'T23:59:59').getTime(); return freeOf(id) + trList().filter(x => x.to===id && x.exp <= end).reduce((s, x) => s + x.amount - (x.fee || 0), 0); }
+function ipoChecks(o){
+  const w = [], by = {}; (o.bids || []).forEach(b => { by[b.cat] = (by[b.cat] || 0) + bidAmt(o, b); });
+  Object.keys(by).forEach(c => { if(by[c] > ipoLim(o, c) + .5) w.push(`${ICAT[c][0]}: ${inr(by[c])} is above the ${inr(ipoLim(o, c))} limit.`); });
+  if(by.hni && by.hni <= HNI_MIN) w.push(`HNI applications must be above ${inr(HNI_MIN)}.`);
+  if(by.hni) w.push('HNI applications cannot be cancelled or lowered once placed, and cannot bid at the cut-off price.');
+  if(o.lo && o.hi) (o.bids || []).forEach((b, i) => { if(!b.cutoff && b.price && (b.price < o.lo || b.price > o.hi)) w.push(`Bid ${i + 1}: price ${inr(b.price)} is outside the band.`); });
+  if((o.bids || []).filter(b => b.cat==='reg').length > 3) w.push('A retail application allows up to 3 bids.');
+  return w;
+}
+const blankBid = (o, cat = 'reg') => ({ id:uid(), cat, lots: cat==='hni' && o.lot && o.hi ? Math.floor(HNI_MIN / (o.lot * o.hi)) + 1 : 1, price:o.hi || '', cutoff:cat!=='hni' });
+function ipoModal(platId, id){
+  const o = id ? (S.ipos || []).find(x => x.id===id) : null, plat = acc(o ? o.plat : platId) || acc(growwId()) || null, d = n => ISO(new Date(Date.now() + n*864e5));
+  const banks = S.accounts.filter(x => ['bank','wallet'].includes(x.type) && !x.inactive), invs = S.accounts.filter(x => x.type==='invest' && !x.inactive && !x.reserve);
+  const defSrc = o ? o.from : (plat && plat.raa && plat.raa.bank) || (banks[0] || {}).id || (plat && plat.id);
+  V.ie = o ? JSON.parse(JSON.stringify(o)) : { lot:'', lo:'', hi:'', bids:[], lim:{} }; if(!V.ie.bids || !V.ie.bids.length) V.ie.bids = [blankBid(V.ie)];
+  const e = V.ie, held = o && o.status==='pending';
+  openModal(o ? `Edit ${esc(o.name)}` : 'IPO – plan or apply', `<div class="sub">Copy the numbers from the IPO page in your app. Save it as a <b>plan</b> before bidding opens (no money moves), or <b>apply</b> to put the money on hold. Like your bank shows it, the balance stays the same but the amount is not free to spend until the result.</div>
+    <label class="f">IPO name<input id="ip_n" value="${esc(e.name || '')}" placeholder="e.g. ABC Industries"></label>
+    <div class="row"><label class="f">Lot size (shares)<input id="ip_l" type="number" inputmode="numeric" value="${e.lot}" oninput="ipUI()"></label><label class="f">Price band from (₹)<input id="ip_lo" type="number" inputmode="decimal" value="${e.lo}" oninput="ipUI()"></label><label class="f">to (₹)<input id="ip_hi" type="number" inputmode="decimal" value="${e.hi}" oninput="ipUI(1)"></label></div>
+    <div class="eyebrow" style="margin-top:6px">Your bids</div><div id="ip_bids"></div>
+    <div class="row"><button class="sm" type="button" onclick="ipBidAdd()">+ Add another bid</button></div>
+    <details style="margin-top:4px"><summary>Category limits</summary><div class="sub" style="margin:8px 0">Usual limits per application. Change them if this IPO's page says something else. HNI must be above ${inr(HNI_MIN)}.</div>
+      <div class="row">${Object.keys(ICAT).map(c => `<label class="f">${ICAT[c][0].replace(/ \(.*\)/, '')} up to (₹)<input id="ip_lim_${c}" type="number" value="${ipoLim(e, c)}" oninput="ipUI()"></label>`).join('')}</div></details>
+    <div id="ip_sum" class="card" style="padding:12px 14px;gap:6px"></div>
+    <label class="f">Money is blocked from<select id="ip_f" onchange="ipUI()" ${held ? 'disabled' : ''}>${banks.map(x => `<option value="${x.id}" ${x.id===defSrc?'selected':''}>${esc(x.name)} · ${inr(freeOf(x.id))} free (UPI block)</option>`).join('')}${invs.map(x => `<option value="${x.id}" ${x.id===defSrc?'selected':''}>${esc(x.name)} balance · ${inr(freeOf(x.id))} free</option>`).join('')}</select></label>
     <label class="f">Shares go to<select id="ip_p" onchange="platPick(this)">${platOpts(plat ? plat.id : 'new:groww')}</select></label>
-    <div class="row"><label class="f">Applied on<input id="ip_d0" type="date" value="${d(0)}"></label><label class="f">IPO close date<input id="ip_d1" type="date" value="${d(0)}"></label></div>
-    <div class="row"><label class="f">Allotment date<input id="ip_d2" type="date" value="${d(2)}"></label><label class="f">Funds unblock or debit<input id="ip_d3" type="date" value="${d(2)}"></label></div>
-    <label class="f">Tentative listing date<input id="ip_d4" type="date" value="${d(4)}"></label>
-    <div class="row"><button class="pri" onclick="saveIpo()">Apply</button><button onclick="closeModal()">Cancel</button></div>`);
+    <div class="row"><label class="f">Bidding opens<input id="ip_d0" type="date" value="${e.open || e.applied || d(0)}" onchange="ipUI()"></label><label class="f">Bidding closes<input id="ip_d1" type="date" value="${e.close || d(2)}" onchange="ipUI()"></label></div>
+    <div class="row"><label class="f">Allotment date<input id="ip_d2" type="date" value="${e.allot || d(3)}"></label><label class="f">Funds unblock or debit<input id="ip_d3" type="date" value="${e.unblock || d(4)}" onchange="ipUI()"></label></div>
+    <label class="f">Listing date<input id="ip_d4" type="date" value="${e.listing || d(5)}"></label>
+    <div class="row">${o ? `<button class="pri" onclick="ipSave('${o.id}')">Save changes</button>` : `<button class="pri" onclick="ipSave('','apply')">Apply now</button><button onclick="ipSave('','plan')">Save as plan</button>`}<button class="ghost" onclick="closeModal()">Cancel</button></div>`);
+  ipUI();
 }
-function saveIpo(){
-  const name = mv('ip_n').trim(), amt = parseFloat(mv('ip_a')), from = mv('ip_f'); if(!name || !(amt > 0)) return toast('IPO name and amount are needed');
-  const free = net(from) - holdTotal(from); if(amt > free + .004) return toast(`${acc(from).name} has only ${inr(free)} free`);
-  const id = uid(), tid = uid(), D = k => mv('ip_d' + k);
-  S.txns.push({ id:tid, ts:tsFrom(D(0) + 'T' + new Date().toTimeString().slice(0,5)), type:'hold', amount:amt, desc:'IPO: ' + name, cat:'Other', from, toName:'On hold (IPO)', ipoId:id });
-  S.ipos = (S.ipos || []).concat({ id, name, amount:amt, from, plat:platResolve(mv('ip_p')), txn:tid, applied:D(0), close:D(1), allot:D(2), unblock:D(3), listing:D(4), status:'pending' });
-  save(); closeModal(); haptic([8,30,12]); render(); toast(`${inr(amt)} on hold for ${name} – balance unchanged, decided on ${fdate(new Date(D(3) + 'T00:00:00'))}`);
+function ipRead(){ const e = V.ie; e.name = mv('ip_n').trim(); e.lot = parseFloat(mv('ip_l')) || ''; e.lo = parseFloat(mv('ip_lo')) || ''; e.hi = parseFloat(mv('ip_hi')) || '';
+  e.lim = {}; Object.keys(ICAT).forEach(c => { const v = parseFloat(mv('ip_lim_' + c)); if(v > 0 && v !== ICAT[c][1]) e.lim[c] = v; });
+  document.querySelectorAll('#ip_bids .bid').forEach((r, i) => { const b = e.bids[i]; if(!b) return; b.cat = r.querySelector('.b_c').value; b.lots = Math.max(1, parseInt(r.querySelector('.b_l').value) || 1); b.cutoff = b.cat!=='hni' && r.querySelector('.b_x').checked; if(!b.cutoff) b.price = parseFloat(r.querySelector('.b_p').value) || ''; });
+  return e; }
+function ipBidsHTML(e){ return e.bids.map((b, i) => `<div class="bid card" style="padding:10px 12px;gap:6px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b class="sub">Bid ${i + 1}</b>${e.bids.length > 1 ? `<button class="sm ghost" type="button" onclick="ipBidDel(${i})" aria-label="Remove bid">×</button>` : ''}</div>
+    <div class="row"><label class="f">Category<select class="b_c" onchange="ipBidCat(${i}, this.value)">${Object.keys(ICAT).map(c => `<option value="${c}" ${b.cat===c?'selected':''}>${ICAT[c][0]}</option>`).join('')}</select></label>
+      <label class="f">Lots<span class="stepper"><button type="button" class="sm" onclick="ipLot(${i},-1)" aria-label="Fewer lots">−</button><input class="b_l" type="number" inputmode="numeric" min="1" value="${b.lots}" oninput="ipUI()"><button type="button" class="sm" onclick="ipLot(${i},1)" aria-label="More lots">+</button></span></label></div>
+    <div class="row" style="align-items:flex-end"><label class="f">Price per share (₹)<input class="b_p" type="number" inputmode="decimal" value="${b.cutoff ? e.hi : b.price}" ${b.cutoff ? 'disabled' : ''} oninput="ipUI()"></label>
+      <label class="ck" style="${b.cat==='hni' ? 'opacity:.4' : ''}"><input type="checkbox" class="b_x" ${b.cutoff ? 'checked' : ''} ${b.cat==='hni' ? 'disabled' : ''} onchange="ipUI(1)"><span>At cut-off price</span></label></div>
+    <div class="sub b_s"></div></div>`).join(''); }
+function ipBidAdd(){ const e = ipRead(); e.bids.push(Object.assign(blankBid(e, (e.bids[e.bids.length - 1] || {}).cat || 'reg'), { lots:(e.bids[e.bids.length - 1] || {}).lots || 1 })); ipUI(2); }
+function ipBidDel(i){ const e = ipRead(); e.bids.splice(i, 1); ipUI(2); }
+function ipBidCat(i, c){ const e = ipRead(); e.bids[i] = Object.assign(blankBid(e, c), { id:e.bids[i].id }); if(c==='hni') ask('HNI application', 'HNI bids <b>cannot be cancelled or lowered</b> once placed, cannot use the cut-off price, and must be above ' + inr(HNI_MIN) + '. The money stays blocked until the result.', 'I understand', null); ipUI(2); }
+function ipLot(i, d){ const e = ipRead(); e.bids[i].lots = Math.max(1, (+e.bids[i].lots || 1) + d); haptic(4); ipUI(2); }
+function ipUI(redraw){
+  const e = redraw===2 ? V.ie : ipRead(), box = $('ip_bids'); if(!box) return;
+  if(redraw || box.children.length !== e.bids.length) box.innerHTML = ipBidsHTML(e);
+  box.querySelectorAll('.bid').forEach((r, i) => { const b = e.bids[i], px = bidPx(e, b); if(b.cutoff) r.querySelector('.b_p').value = e.hi || '';
+    r.querySelector('.b_s').innerHTML = e.lot && px ? `${b.lots * e.lot} shares × ${inr(px)} = <b>${inr(bidAmt(e, b))}</b>` : 'Enter the lot size and price to see the amount.'; });
+  const need = ipoNeed(e), from = mv('ip_f'), close = mv('ip_d1'), o = (S.ipos || []).find(x => x.id===e.id), mine = o && o.status==='pending' ? ipoNeed(o) : 0;
+  const now = freeOf(from) + (o && o.status==='pending' && o.from===from ? mine : 0), by = close ? freeOn(from, close) + (o && o.status==='pending' && o.from===from ? mine : 0) : now, w = ipoChecks(e);
+  $('ip_sum').innerHTML = `<div class="item" style="padding:4px 0"><span>Money blocked</span><b>${inr(need)}</b></div><div class="sub">${ipoLots(e)} lot${ipoLots(e)===1?'':'s'} · ${ipoLots(e) * (e.lot || 0)} shares · ${e.bids.length} bid${e.bids.length===1?'':'s'}${e.bids.length > 1 ? ' – the bank blocks the highest-value bids together' : ''}</div>
+    <div class="sub">Free in ${esc(acc(from)?.name || '?')} now: <b>${inr(now)}</b>${by > now + .5 ? ` · by the closing day (money on the way): <b>${inr(by)}</b>` : ''} → ${need <= now + .004 ? '<span class="pos">enough</span>' : need <= by + .004 ? '<span class="pos">enough once the money on the way lands</span>' : `<span class="neg">short by ${inr(need - by)}</span>`}</div>
+    ${w.map(x => `<div class="sub neg">⚠ ${x}</div>`).join('')}`;
 }
-function ipoResult(id, got){
-  const o = (S.ipos || []).find(x => x.id===id); if(!o) return;
-  if(got==='ask') return openModal(`${esc(o.name)} – allotted?`, `<div class="sub">Check the allotment in your app. If you got shares, enter the amount actually debited (full ${inr(o.amount)}, or less for a partial allotment). The rest is released.</div>
-    <label class="f">Amount debited for shares (₹)<input id="ir_a" type="number" value="${o.amount}"></label><label class="f">Shares received (optional)<input id="ir_q" type="number" placeholder="e.g. 4"></label>
-    <div class="row"><button class="pri" onclick="ipoResult('${id}', parseFloat(mv('ir_a'))||0)">Save allotment</button><button onclick="closeModal()">Cancel</button></div>`);
-  const h = S.txns.find(t => t.id===o.txn); if(h) h.released = true;
-  if(got > 0){ const amt = Math.min(got, o.amount), q = parseFloat(mv('ir_q')) || 0, plat = acc(o.plat);
-    S.txns.push({ id:uid(), ts:Date.now(), type:'invest', amount:amt, desc:'IPO allotted: ' + o.name, cat:'Other', from:o.from, toName:(plat?.name || 'Shares') + ' (shares)', ipoId:id });
-    if(plat) plat.holdings = (plat.holdings || []).concat({ id:uid(), type:'stocks', name:o.name + (q ? ` · ${q} shares` : '') + ' (IPO)', invested:amt, value:amt, valueAt:ISO(new Date()), ipoId:id });
-    o.status = 'allotted'; o.allotted = amt; }
-  else o.status = 'not';
-  save(); closeModal(); haptic(got > 0 ? [10,40,10,40,20] : 14); render();
-  toast(got > 0 ? `Allotted – ${inr(Math.min(got, o.amount))} debited${got < o.amount ? ', ' + inr(o.amount - got) + ' released' : ''}` : `Not allotted – ${inr(o.amount)} released to ${acc(o.from)?.name || 'your account'}`);
+function ipSave(id, how){
+  const e = ipRead(), D = k => mv('ip_d' + k); if(!e.name) return toast('Give the IPO a name'); if(!(e.lot > 0) || !(e.hi > 0)) return toast('Lot size and the price band are needed');
+  if(e.bids.some(b => !(bidPx(e, b) > 0))) return toast('Every bid needs a price, or tick cut-off');
+  const bad = ipoChecks(e).filter(x => !/cannot be cancelled/.test(x)); if(bad.length) return toast(bad[0]);
+  Object.assign(e, { from: mv('ip_f') || e.from, plat:platResolve(mv('ip_p')), open:D(0), close:D(1), allot:D(2), unblock:D(3), listing:D(4) });
+  if(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const need = ipoNeed(e);
+    if(o.status==='pending'){ const h = S.txns.find(t => t.id===o.txn), room = freeOf(o.from) + (h ? h.amount : 0); if(need > room + .004) return toast(`${acc(o.from).name} has only ${inr(room)} free`); if(h){ h.amount = need; h.desc = 'IPO: ' + e.name; } e.amount = need; }
+    Object.assign(o, e); save(); closeModal(); scheduleNotifs(); render(); return toast('Saved'); }
+  const o = Object.assign(e, { id:uid(), status:'planned', funds:[], made:Date.now() }); S.ipos = (S.ipos || []).concat(o); save(); closeModal(); scheduleNotifs();
+  if(how==='apply') return ipoApply(o.id);
+  render(); haptic(10); const short = ipoNeed(o) - freeOn(o.from, o.close);
+  if(short > .004) return ask('Plan saved – money is short', `${esc(o.name)} needs <b>${inr(ipoNeed(o))}</b>. ${esc(acc(o.from).name)} will have <b>${inr(freeOn(o.from, o.close))}</b> free by the closing day – short by <b>${inr(short)}</b>. Find the money now?`, 'Find the money', () => fundModal(o.id), false, 'Later');
+  toast(`Planned – you will be reminded when bidding opens`);
 }
-function ipoDel(id){ ask('Remove this IPO?', 'The hold is removed and the money counts as free again. Shares already added stay in Holdings.', 'Remove', () => { const o = (S.ipos||[]).find(x => x.id===id); if(o){ S.txns = S.txns.filter(t => !(t.id===o.txn && o.status==='pending')); S.ipos = S.ipos.filter(x => x.id!==id); } save(); render(); }, true); }
+/* apply = put the money on hold (UPI block) */
+function ipoApply(id){
+  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const need = ipoNeed(o), free = freeOf(o.from);
+  if(need > free + .004) return fundModal(id, true);
+  const tid = uid(); S.txns.push({ id:tid, ts:Date.now(), type:'hold', amount:need, desc:'IPO: ' + o.name, cat:'Other', from:o.from, toName:'On hold (IPO)', ipoId:id });
+  Object.assign(o, { txn:tid, amount:need, applied:ISO(new Date()), status:'pending' }); save(); closeModal(); haptic([8,30,12]); scheduleNotifs(); render();
+  toast(`${inr(need)} on hold for ${o.name} – balance unchanged, decided around ${fD(o.unblock)}`);
+}
+/* find the money: other banks, Groww cash (withdraw first), selling / redeeming other investments, a lender */
+function fundSrcOpts(o){
+  const banks = S.accounts.filter(a => ['bank','wallet','cash'].includes(a.type) && !a.inactive && a.id!==o.from && freeOf(a.id) > .5), invs = S.accounts.filter(a => a.type==='invest' && !a.inactive && !a.reserve && a.id!==o.from), now = new Date();
+  return [['Banks and cash', banks.map(a => [`bank:${a.id}`, `${a.name} · ${inr(freeOf(a.id))} free`])],
+    ['Withdraw unused cash first', invs.filter(a => freeOf(a.id) > .5).map(a => [`wd:${a.id}`, `${a.name} balance · ${inr(freeOf(a.id))} free`])],
+    ['Sell or redeem an investment', invs.flatMap(a => (a.holdings || []).filter(h => holdingValue(h, now) > 0).map(h => [`rd:${a.id}:${h.id}`, `${h.name || HTYPES[h.type]} (${a.name}) · ${inr(holdingValue(h, now))}`]))],
+    ['Borrow', [['lend', 'From a person (family, friend…)']]]].filter(g => g[1].length);
+}
+function fundModal(id, thenApply){
+  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; V.fo = { id, apply:!!thenApply, rows:[] };
+  const need = ipoNeed(o), now = freeOf(o.from), by = freeOn(o.from, o.close || ISO(new Date())), short = Math.max(0, need - (thenApply ? now : by));
+  openModal('Find the money', `<div class="sub">${esc(o.name)} needs <b>${inr(need)}</b> in ${esc(acc(o.from).name)}. Free now <b>${inr(now)}</b>${by > now + .5 ? `, by the closing day <b>${inr(by)}</b> (money on the way)` : ''}.${short > .004 ? ` Short by <b class="neg">${inr(short)}</b>.` : ' <span class="pos">Enough already.</span>'}</div>
+    ${(S.ipos || []).filter(x => x.id!==o.id && ['pending','result'].includes(x.status) && x.from===o.from).map(x => `<div class="sub">Not counted yet: <b>${inr(x.amount || ipoNeed(x))}</b> on hold for ${esc(x.name)} (decided ${fD(x.unblock)}). Its What-if table shows what comes back.</div>`).join('')}
+    <div class="sub">An IPO is blocked from your <b>bank</b> by UPI, so Groww cash or an investment must be withdrawn to the bank first. Add one or more sources below.</div>
+    <div id="fo_rows"></div><div class="row"><button class="sm" type="button" onclick="foAdd()">+ Add another source</button></div><div class="sub" id="fo_sum"></div>
+    <div class="row"><button class="pri" onclick="foSave()">Save</button><button class="ghost" onclick="closeModal()">Cancel</button></div>`);
+  V.fo.short = short; foAdd(short || '');
+}
+function foRowHTML(o, r, i){ const g = fundSrcOpts(o);
+  return `<div class="card fo" style="padding:10px 12px;gap:6px"><div style="display:flex;justify-content:space-between"><b class="sub">Source ${i + 1}</b>${V.fo.rows.length > 1 ? `<button class="sm ghost" type="button" onclick="foDel(${i})" aria-label="Remove">×</button>` : ''}</div>
+    <label class="f">Take it from<select class="fo_s" onchange="foSync(1)"><option value="">Choose…</option>${g.map(([l, xs]) => `<optgroup label="${l}">${xs.map(([v, t]) => `<option value="${v}" ${r.s===v?'selected':''}>${esc(t)}</option>`).join('')}</optgroup>`).join('')}</select></label>
+    <div class="row"><label class="f">Amount (₹)<input class="fo_a" type="number" inputmode="decimal" value="${r.a}" oninput="foSync()"></label>
+    ${r.s==='lend' ? `<label class="f">Person<input class="fo_p" value="${esc(r.p || '')}" placeholder="Name" oninput="foSync()"></label>` : ''}
+    ${/^(wd|rd)/.test(r.s || '') ? `<label class="f">Charges (₹)<input class="fo_c" type="number" inputmode="decimal" value="${r.c || ''}" placeholder="0" oninput="foSync()"></label>` : ''}</div>
+    ${r.s==='lend' && Object.keys(pplBal()).length ? `<div class="row">${Object.keys(pplBal()).slice(0, 6).map(n => `<button type="button" class="sm ghost" onclick="foPerson(${i},'${qs(n)}')">${esc(n)}</button>`).join('')}</div>` : ''}
+    ${(r.s || '').startsWith('wd') ? `<div class="seg"><button type="button" class="${r.m!=='inst'?'on':''}" onclick="foMode(${i},'std')">Standard</button><button type="button" class="${r.m==='inst'?'on':''}" onclick="foMode(${i},'inst')">Instant</button></div>` : ''}
+    ${(r.s || '').startsWith('rd') ? `<label class="f">Working days to arrive<input class="fo_w" type="number" min="1" max="15" value="${r.w || 1}" oninput="foSync()"></label>` : ''}
+    ${(r.s || '').startsWith('wd') && r.m!=='inst' || (r.s || '').startsWith('rd') ? `<label class="ck"><input type="checkbox" class="fo_d" ${r.d ? 'checked' : ''} onchange="foSync()"><span>Already in my bank</span></label>` : ''}
+    <div class="sub fo_n"></div></div>`; }
+function foAdd(a){ foSync(); V.fo.rows.push({ s:'', a: a ?? (Math.max(0, V.fo.short - V.fo.rows.reduce((x, r) => x + (+r.a || 0), 0)) || ''), m:'std' }); foDraw(); }
+function foDel(i){ foSync(); V.fo.rows.splice(i, 1); foDraw(); }
+function foMode(i, m){ foSync(); V.fo.rows[i].m = m; foDraw(); }
+function foPerson(i, n){ foSync(); V.fo.rows[i].p = n; foDraw(); }
+function foDraw(){ const o = (S.ipos || []).find(x => x.id===V.fo.id); $('fo_rows').innerHTML = V.fo.rows.map((r, i) => foRowHTML(o, r, i)).join(''); foSync(); }
+function foSync(redraw){
+  const els = document.querySelectorAll('#fo_rows .fo'); if(!els.length) return;
+  els.forEach((el, i) => { const r = V.fo.rows[i], q = c => el.querySelector(c); r.s = q('.fo_s').value; r.a = q('.fo_a').value; if(q('.fo_p')) r.p = q('.fo_p').value; if(q('.fo_c')) r.c = q('.fo_c').value; if(q('.fo_w')) r.w = q('.fo_w').value; if(q('.fo_d')) r.d = q('.fo_d').checked; });
+  if(redraw) return foDraw();
+  els.forEach((el, i) => { const r = V.fo.rows[i], a = +r.a || 0, c = +r.c || 0, n = el.querySelector('.fo_n'); let t = '';
+    if(r.s.startsWith('bank')) t = 'Moved to the IPO bank now.';
+    else if(r.s.startsWith('wd')) t = r.m==='inst' ? `${etaNote('inst')} You get ${inr(Math.max(0, a - c))}.` : r.d ? 'Recorded as arrived now.' : etaNote('std') + ` You get ${inr(Math.max(0, a - c))}.`;
+    else if(r.s.startsWith('rd')) t = r.d ? 'Recorded as arrived now.' : `Expected around <b>${fdt(etaFor('days', Date.now(), +r.w || 1))}</b>. You get ${inr(Math.max(0, a - c))}. Shares settle T+1.`;
+    else if(r.s==='lend') t = 'Recorded as borrowed into the IPO bank now (not income). Pay it back from the IPO card after the result.';
+    n.innerHTML = t; });
+  const sum = V.fo.rows.reduce((x, r) => x + Math.max(0, (+r.a || 0) - (+r.c || 0)), 0), left = V.fo.short - sum;
+  $('fo_sum').innerHTML = `Adding <b>${inr(sum)}</b>${V.fo.short > .004 ? ` of ${inr(V.fo.short)} short · ${left > .004 ? `<span class="neg">still short ${inr(left)}</span>` : '<span class="pos">covered</span>'}` : ''}`;
+}
+function foSave(){
+  foSync(); const o = (S.ipos || []).find(x => x.id===V.fo.id); if(!o) return; const rows = V.fo.rows.filter(r => r.s && +r.a > 0); if(!rows.length) return toast('Pick a source and an amount');
+  for(const r of rows){ const a = +r.a, c = +r.c || 0; if(c >= a) return toast('Charges must be less than the amount');
+    if(r.s==='lend' && !(r.p || '').trim()) return toast('Who is lending it?');
+    const [k, x, h] = r.s.split(':'); if(k==='bank' || k==='wd'){ if(a > freeOf(x) + .004) return toast(`${acc(x).name} has only ${inr(freeOf(x))} free`); }
+    if(k==='rd'){ const hh = (acc(x).holdings || []).find(y => y.id===h); if(!hh || a > holdingValue(hh, new Date()) + .5) return toast('More than the holding is worth'); } }
+  const ts = Date.now(), lands = []; o.funds = o.funds || [];
+  rows.forEach(r => { const a = +r.a, c = +r.c || 0, [k, x, h] = r.s.split(':'), f = { id:uid(), k, amt:a - c, ts };
+    if(k==='bank'){ const t = { id:uid(), ts, type:'transfer', amount:a, desc:'For IPO: ' + o.name, cat:'Other', from:x, to:o.from }; S.txns.push(t); Object.assign(f, { src:x, txn:t.id }); }
+    else if(k==='lend'){ const p = r.p.trim(), t = { id:uid(), ts, type:'income', amount:a, desc:`I borrowed – ${p} (IPO ${o.name})`, cat:'Family', to:o.from, ledger:true }; S.txns.push(t); S.people.push({ id:uid(), person:p, act:'borrowed', amt:-a, ts, txnId:t.id, note:'for IPO ' + o.name }); Object.assign(f, { person:p, txn:t.id }); }
+    else { const hh = k==='rd' ? (acc(x).holdings || []).find(y => y.id===h) : null, mode = k==='wd' ? (r.m==='inst' ? 'inst' : 'std') : 'days';
+      const tr = mkTransit({ from:x, to:o.from, amount:a, fee:c, mode, exp:etaFor(mode, ts, +r.w || 1), ipoId:o.id, hold: hh ? { plat:x, hid:h, name:hh.name || HTYPES[hh.type], gross:a, full:a >= holdingValue(hh, new Date()) - .5 } : undefined });
+      Object.assign(f, { src:x, tid:tr.id });
+      if(r.d){ tr.exp = ts; arriveDirect(tr, a - c); } else lands.push(tr); }
+    o.funds.push(f); });
+  save(); closeModal(); scheduleNotifs(); haptic(10);
+  if(V.fo.apply && ipoNeed(o) <= freeOf(o.from) + .004) return ipoApply(o.id);
+  render(); toast(lands.length ? `Saved – ${lands.length > 1 ? 'money lands' : inr(lands[0].amount - (lands[0].fee || 0)) + ' lands'} around ${fdt(Math.max(...lands.map(x => x.exp)))}. Apply once it is in.` : 'Saved');
+}
+function arriveDirect(x, got){ const ts = Date.now(), fee = Math.max(0, x.amount - got);
+  if(x.hold){ const a = acc(x.hold.plat), h = a && (a.holdings || []).find(y => y.id===x.hold.hid); if(h){ if(x.hold.full) a.holdings = a.holdings.filter(y => y!==h); else { const v = holdingValue(h, new Date()) || 1, k = Math.max(0, 1 - x.hold.gross / v); if(h.type==='fd') h.principal = Math.round(+h.principal*k*100)/100; else if(h.type!=='rd'){ h.invested = Math.round((+h.invested||0)*k*100)/100; h.value = Math.round(((+h.value||0) - x.hold.gross)*100)/100; } } }
+    S.txns.push({ id:uid(), ts, type:'income', amount:x.amount, desc:`${x.hold.name} withdrawn`, cat:'Other', to:x.to, ledger:true, transit:x.id }); }
+  else S.txns.push({ id:uid(), ts, type:'transfer', amount:x.amount, desc:`Withdrawn from ${acc(x.from)?.name || '?'}`, cat:'Other', from:x.from, to:x.to, transit:x.id });
+  if(fee > 0) S.txns.push({ id:uid(), ts:ts + 1, type:'expense', amount:fee, desc:'Withdrawal charges', cat:'Other', from:x.to, transit:x.id });
+  x.done = true; x.doneAt = ts; x.got = got; }
+/* what-if: 0, 1, 2 … lots allotted → debited, released, free after, and what is left for the next IPO */
+function nextIpoOf(o){ return (S.ipos || []).filter(x => x.id!==o.id && x.status==='planned' && x.close && x.close >= (o.unblock || o.allot || '')).sort((a, b) => (a.open || a.close).localeCompare(b.open || b.close))[0]; }
+function scenRows(o){ const L = ipoLots(o) || 1, ks = L <= 6 ? [...Array(L + 1).keys()] : [0, 1, 2, 3, Math.floor(L/2), L];
+  const need = ipoNeed(o), px = +o.fp || +o.hi || 0, held = o.status==='pending', nx = nextIpoOf(o);
+  return { nx, rows: ks.map(k => { const debit = o.bids ? k * o.lot * px : (k ? need : 0), rel = Math.max(0, need - debit);
+    const after = freeOn(o.from, o.unblock || ISO(new Date())) + (held ? rel : -debit);
+    let forNext = null; if(nx){ const base = freeOn(nx.from, nx.close), eff = o.from===nx.from ? ((o.unblock || '') <= nx.close ? (held ? rel : -debit) : (held ? 0 : -need)) : 0; forNext = base + eff; }
+    return { k, debit, rel, after, forNext }; }) }; }
+function scenHTML(o){
+  if(!o.bids || !(o.lot > 0)) return ''; const { nx, rows } = scenRows(o);
+  return `<details class="scn" ${o.status==='planned' || o.status==='pending' ? 'open' : ''}><summary>What if – allotment outcomes</summary>
+    <div class="sub" style="margin:6px 0">At ${inr(+o.fp || +o.hi)} a share. Free money is for ${esc(acc(o.from)?.name || '?')} on ${fD(o.unblock)}${nx ? `; the last column is what ${esc(acc(nx.from)?.name || '?')} has for <b>${esc(nx.name)}</b> (needs ${inr(ipoNeed(nx))}, closes ${fD(nx.close)})` : ''}. Money on the way is counted on its expected date.</div>
+    <div class="tw"><table class="tb"><tr><th>Lots allotted</th><th>Debited</th><th>Released</th><th>Free after</th>${nx ? `<th>For ${esc(nx.name)}</th>` : ''}</tr>${rows.map(r => `<tr><td>${r.k}${r.k ? ' · ' + r.k * o.lot + ' sh' : ''}</td><td>${mi(r.debit)}</td><td>${mi(r.rel)}</td><td>${mi(r.after)}</td>${nx ? `<td class="${r.forNext >= ipoNeed(nx) - .004 ? 'pos' : 'neg'}">${r.forNext >= ipoNeed(nx) - .004 ? '✓ ' + mi(r.forNext) : 'short ' + mi(ipoNeed(nx) - r.forNext)}</td>` : ''}</tr>`).join('')}</table></div></details>`;
+}
+/* result: which bids got shares, then (now or on the debit day) record the debit and release */
+function ipoResult(id, got){ if(got===0) return ipoResultModal(id, true); return ipoResultModal(id); }
+function ipoResultModal(id, none){
+  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const due = !o.unblock || o.unblock <= ISO(new Date()), banks = S.accounts.filter(x => ['bank','wallet','invest'].includes(x.type) && !x.inactive);
+  V.ir = { id, lots: o.res && o.res.lots ? o.res.lots.slice() : (o.bids || []).map((b, i) => !none && i===0 ? 1 : 0) };
+  openModal(`${esc(o.name)} – result`, `<div class="sub">Check the allotment in your app and mark how many lots each bid got. ${o.bids && o.bids.filter(b => b.cat==='reg').length > 1 ? 'When an IPO is oversubscribed, a retail application gets at most 1 lot in total.' : ''}</div>
+    ${o.bids ? `<div class="list">${o.bids.map((b, i) => `<div class="item"><div class="l"><div class="t">Bid ${i + 1} · ${ICAT[b.cat][0].replace(/ \(.*\)/, '')}</div><div class="sub">${b.lots} lot${b.lots>1?'s':''} · ${b.lots * o.lot} shares at ${b.cutoff ? 'cut-off' : inr(b.price)}</div></div><div class="r"><span class="stepper"><button type="button" class="sm" onclick="irLot(${i},-1)" aria-label="Fewer">−</button><b id="ir_l${i}" style="min-width:26px;text-align:center">${V.ir.lots[i]}</b><button type="button" class="sm" onclick="irLot(${i},1)" aria-label="More">+</button></span></div></div>`).join('')}</div>
+      <div class="row"><button class="sm" type="button" onclick="irSet(0)">None allotted</button><button class="sm" type="button" onclick="irSet(1)">1 lot allotted</button></div>
+      <label class="f">Final issue price per share (₹)<input id="ir_p" type="number" inputmode="decimal" value="${o.fp || o.hi}" oninput="irUI()"></label>`
+    : `<label class="f">Amount debited for shares (₹)<input id="ir_a" type="number" inputmode="decimal" value="${none ? 0 : o.amount}" oninput="irUI()"></label><label class="f">Shares received (optional)<input id="ir_q" type="number" placeholder="e.g. 21"></label>`}
+    <div id="ir_sum" class="card" style="padding:12px 14px;gap:4px"></div>
+    <div class="f">Has the bank already done it?<div class="seg" id="ir_m"><button type="button" class="${due ? 'on' : ''}" onclick="irMoved(1)">Yes – it is done</button><button type="button" class="${due ? '' : 'on'}" onclick="irMoved(0)">Not yet</button></div></div>
+    <label class="f" id="ir_bw">Which account was it debited from / released to?<select id="ir_b">${banks.map(x => `<option value="${x.id}" ${x.id===o.from?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
+    <div class="row"><button class="pri" onclick="irSave('${id}')">Save result</button><button class="ghost" onclick="closeModal()">Cancel</button></div>`);
+  V.ir.moved = due; irUI();
+}
+function irLot(i, d){ const o = (S.ipos || []).find(x => x.id===V.ir.id); V.ir.lots[i] = Math.max(0, Math.min(o.bids[i].lots, V.ir.lots[i] + d)); $('ir_l' + i).textContent = V.ir.lots[i]; haptic(4); irUI(); }
+function irSet(n){ const o = (S.ipos || []).find(x => x.id===V.ir.id); V.ir.lots = o.bids.map(() => 0); if(n) V.ir.lots[o.bids.findIndex(b => b.lots >= 1)] = 1; V.ir.lots.forEach((v, i) => $('ir_l' + i).textContent = v); irUI(); }
+function irMoved(v){ V.ir.moved = !!v; document.querySelectorAll('#ir_m button').forEach((b, i) => b.classList.toggle('on', i===(v ? 0 : 1))); irUI(); }
+function irCalc(o){ if(!o.bids){ const d = Math.max(0, Math.min(o.amount, parseFloat(mv('ir_a')) || 0)); return { debit:d, q:parseFloat(mv('ir_q')) || 0, fp:0 }; }
+  const fp = parseFloat(mv('ir_p')) || +o.hi, lots = V.ir.lots.reduce((x, v) => x + v, 0); return { debit:lots * o.lot * fp, q:lots * o.lot, fp, lots }; }
+function irUI(){ const o = (S.ipos || []).find(x => x.id===V.ir.id), c = irCalc(o), need = ipoNeed(o);
+  $('ir_bw').style.display = V.ir.moved ? '' : 'none';
+  $('ir_sum').innerHTML = `<div class="item" style="padding:3px 0"><span>${c.debit ? `Allotted${c.q ? ' · ' + c.q + ' shares' : ''}` : 'Not allotted'}</span><b>${c.debit ? inr(c.debit) + ' debited' : ''}</b></div><div class="item" style="padding:3px 0"><span>Released back</span><b>${inr(Math.max(0, need - c.debit))}</b></div>${c.debit > need + .5 ? '<div class="sub neg">More than what was blocked.</div>' : ''}${V.ir.moved ? '' : `<div class="sub">The money stays on hold. On ${fD(o.unblock)} you are reminded to confirm it.</div>`}`; }
+function irSave(id){
+  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const c = irCalc(o); if(c.debit > ipoNeed(o) + .5) return toast('More than what was blocked');
+  o.res = { lots:o.bids ? V.ir.lots.slice() : null, q:c.q, debit:Math.round(c.debit*100)/100 }; if(c.fp) o.fp = c.fp;
+  if(!V.ir.moved){ o.status = 'result'; save(); closeModal(); scheduleNotifs(); render(); return toast(c.debit ? 'Allotted – confirm the debit when the bank does it' : 'Not allotted – confirm when the money is released'); }
+  ipoSettle(o, mv('ir_b'));
+}
+function ipoSettleModal(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o || !o.res) return; const banks = S.accounts.filter(x => ['bank','wallet','invest'].includes(x.type) && !x.inactive);
+  openModal(`${esc(o.name)} – did the bank do it?`, `<div class="sub">${o.res.debit ? `<b>${inr(o.res.debit)}</b> should be debited and <b>${inr(Math.max(0, ipoNeed(o) - o.res.debit))}</b> released.` : `All <b>${inr(ipoNeed(o))}</b> should be released.`} Check your bank app – it can take a day longer than planned.</div>
+    <label class="f">Account<select id="is_b">${banks.map(x => `<option value="${x.id}" ${x.id===o.from?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
+    <div class="row"><button class="pri good" onclick="ipoSettle((S.ipos||[]).find(x=>x.id==='${id}'), mv('is_b'))">Yes, it is done</button><button onclick="ipoNotYet('${id}')">Not yet</button><button class="ghost" onclick="ipoResultModal('${id}')">Change the result</button></div>`); }
+function ipoNotYet(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o) return; o.late = ISO(nextWork(new Date())); save(); closeModal(); scheduleNotifs(); render(); toast(`I will ask again on ${fD(o.late)}`); }
+function ipoSettle(o, bank){
+  const debit = (o.res && o.res.debit) || 0, h = S.txns.find(t => t.id===o.txn), plat = acc(o.plat); if(h) h.released = true;
+  if(debit > 0){ S.txns.push({ id:uid(), ts:Date.now(), type:'invest', amount:debit, desc:'IPO allotted: ' + o.name, cat:'Other', from:bank || o.from, toName:(plat?.name || 'Shares') + ' (shares)', ipoId:o.id });
+    if(plat) plat.holdings = (plat.holdings || []).concat({ id:uid(), type:'stocks', name:o.name + (o.res.q ? ` · ${o.res.q} shares` : '') + ' (IPO)', invested:debit, value:debit, valueAt:ISO(new Date()), ipoId:o.id, qty:o.res.q || undefined }); }
+  Object.assign(o, { status: debit > 0 ? 'allotted' : 'not', allotted:debit, settled:Date.now(), settleBank:bank || o.from }); delete o.late;
+  save(); closeModal(); haptic(debit > 0 ? [10,40,10,40,20] : 14); scheduleNotifs(); render();
+  const rel = Math.max(0, ipoNeed(o) - debit); toast(debit > 0 ? `Allotted – ${inr(debit)} debited${rel ? ', ' + inr(rel) + ' released' : ''}` : `Not allotted – ${inr(rel)} released`);
+  if(leftOf(o) > .5) setTimeout(() => ask('Put back what you took?', `You brought in <b>${inr(fundsIn(o))}</b> for ${esc(o.name)}. <b>${inr(leftOf(o))}</b> of it is free again. Send it back to where it came from, to a lender, or to another account?`, 'Choose where', () => leftModal(o.id), false, 'Keep it here'), 600);
+}
+const fundsIn = o => (o.funds || []).reduce((x, f) => x + (f.amt || 0), 0);
+const leftOf = o => ['allotted','not'].includes(o.status) ? Math.max(0, Math.min(fundsIn(o), ipoNeed(o) - (o.allotted || 0)) - (o.back || 0)) : 0;
+/* leftover: back to the sources (banks, Groww, investments, lenders), or into any account – custom amounts */
+function leftModal(id){
+  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; let rest = leftOf(o); const pre = [];
+  (o.funds || []).slice().reverse().forEach(f => { if(rest <= .004) return; const v = Math.min(rest, f.amt); rest -= v; pre.push({ d: f.k==='lend' ? 'p:' + f.person : f.src, a:Math.round(v*100)/100 }); });
+  V.lo = { id, rows: pre.length ? pre : [{ d:'', a:'' }] };
+  openModal('Leftover money', `<div class="sub">${esc(o.name)}: you brought in <b>${inr(fundsIn(o))}</b>${(o.funds || []).length ? ' (' + o.funds.map(f => (f.k==='lend' ? f.person : acc(f.src)?.name || '?') + ' ' + inr(f.amt)).join(', ') + ')' : ''}. Debited <b>${inr(o.allotted || 0)}</b>. Free again: <b>${inr(leftOf(o))}</b> in ${esc(acc(o.settleBank || o.from)?.name || '?')}.</div>
+    <div class="sub">Rows are filled with the sources you took it from. Change any row, split it, or add another account.</div>
+    <div id="lo_rows"></div><div class="row"><button class="sm" type="button" onclick="loAdd()">+ Add another</button><button class="sm ghost" type="button" onclick="loAll()">All into one account</button></div><div class="sub" id="lo_sum"></div>
+    <div class="row"><button class="pri" onclick="loSave()">Move it</button><button class="ghost" onclick="closeModal()">Later</button></div>`);
+  loDraw();
+}
+function loOpts(o, sel){ const src = o.settleBank || o.from, ppl = [...new Set((o.funds || []).filter(f => f.k==='lend').map(f => f.person).concat(Object.keys(pplBal()).filter(n => pplBal()[n] < 0)))];
+  return `<option value="">Choose…</option><optgroup label="Accounts">${S.accounts.filter(a => ['bank','wallet','cash','invest'].includes(a.type) && !a.inactive && !a.reserve && a.id!==src).map(a => `<option value="${a.id}" ${a.id===sel?'selected':''}>${esc(a.name)}${a.type==='invest' ? ' (add money back)' : ''}</option>`).join('')}</optgroup>${ppl.length ? `<optgroup label="Pay back a lender">${ppl.map(n => `<option value="p:${esc(n)}" ${'p:'+n===sel?'selected':''}>${esc(n)}${pplBal()[n] < 0 ? ' · you owe ' + inr(-pplBal()[n]) : ''}</option>`).join('')}</optgroup>` : ''}<option value="keep" ${sel==='keep'?'selected':''}>Keep it in ${esc(acc(src)?.name || '?')}</option>`; }
+function loDraw(){ const o = (S.ipos || []).find(x => x.id===V.lo.id); $('lo_rows').innerHTML = V.lo.rows.map((r, i) => `<div class="row lo" style="align-items:flex-end"><label class="f">To<select class="lo_d" onchange="loSync()">${loOpts(o, r.d)}</select></label><label class="f" style="max-width:130px">Amount (₹)<input class="lo_a" type="number" inputmode="decimal" value="${r.a}" oninput="loSync()"></label>${V.lo.rows.length > 1 ? `<button class="sm ghost" type="button" onclick="loDel(${i})" aria-label="Remove">×</button>` : ''}</div>`).join(''); loSync(); }
+function loSync(){ document.querySelectorAll('#lo_rows .lo').forEach((el, i) => { V.lo.rows[i].d = el.querySelector('.lo_d').value; V.lo.rows[i].a = el.querySelector('.lo_a').value; });
+  const o = (S.ipos || []).find(x => x.id===V.lo.id), sum = V.lo.rows.reduce((x, r) => x + (+r.a || 0), 0), left = leftOf(o) - sum;
+  $('lo_sum').innerHTML = `Placing <b>${inr(sum)}</b> of ${inr(leftOf(o))} · ${Math.abs(left) < .01 ? '<span class="pos">all placed</span>' : left > 0 ? `${inr(left)} stays in ${esc(acc(o.settleBank || o.from)?.name || '?')}` : `<span class="neg">${inr(-left)} more than the leftover</span>`}`; }
+function loAdd(){ loSync(); const o = (S.ipos || []).find(x => x.id===V.lo.id), used = V.lo.rows.reduce((x, r) => x + (+r.a || 0), 0); V.lo.rows.push({ d:'', a:Math.max(0, Math.round((leftOf(o) - used)*100)/100) || '' }); loDraw(); }
+function loDel(i){ loSync(); V.lo.rows.splice(i, 1); loDraw(); }
+function loAll(){ const o = (S.ipos || []).find(x => x.id===V.lo.id); V.lo.rows = [{ d:'', a:Math.round(leftOf(o)*100)/100 }]; loDraw(); }
+function loSave(){
+  loSync(); const o = (S.ipos || []).find(x => x.id===V.lo.id), src = o.settleBank || o.from, rows = V.lo.rows.filter(r => r.d && +r.a > 0), sum = rows.reduce((x, r) => x + +r.a, 0);
+  if(!rows.length) return toast('Choose where and how much'); if(sum > leftOf(o) + .01) return toast(`Only ${inr(leftOf(o))} is left over`);
+  if(sum > freeOf(src) + .01 && rows.some(r => r.d!=='keep')) return toast(`${acc(src).name} has only ${inr(freeOf(src))} free`);
+  const ts = Date.now(); rows.forEach((r, i) => { const a = +r.a;
+    if(r.d==='keep'){}
+    else if(r.d.startsWith('p:')){ const p = r.d.slice(2), t = { id:uid(), ts:ts + i, type:'expense', amount:a, desc:`I paid them back – ${p}`, cat:'Family', from:src, ledger:true }; S.txns.push(t); S.people.push({ id:uid(), person:p, act:'iPaid', amt:a, ts:ts + i, txnId:t.id, note:'IPO ' + o.name + ' leftover' }); }
+    else S.txns.push({ id:uid(), ts:ts + i, type:'transfer', amount:a, desc:`IPO leftover – ${o.name}`, cat:'Other', from:src, to:r.d }); });
+  o.back = (o.back || 0) + sum; save(); closeModal(); haptic([8,30,12]); render(); toast(`${inr(sum)} placed`);
+}
+function ipoDel(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o) return;
+  ask('Remove this IPO?', o.status==='pending' || o.status==='result' ? 'The hold is removed and the money counts as free again. Money you already moved for it stays where it is.' : 'It is removed from the list. Shares already added stay in Holdings, and money you moved stays where it is.', 'Remove', () => { S.txns = S.txns.filter(t => !(t.id===o.txn && (o.status==='pending' || o.status==='result'))); S.ipos = S.ipos.filter(x => x.id!==id); save(); scheduleNotifs(); render(); }, true); }
+const IPST = { planned:['Planned', ''], pending:['On hold', 'w'], result:['Result in', 'w'], allotted:['Allotted', 'g'], not:['Not allotted', ''] };
 function ipoListHTML(){
-  const today = ISO(new Date()), L = (S.ipos || []).filter(o => o.status==='pending' || !o.listing || o.listing >= today).slice().reverse();
-  if(!L.length) return '';
-  const f = x => x ? fdate(new Date(x + 'T00:00:00')) : '—';
-  return `<div class="eyebrow" style="margin-top:6px">IPOs</div>` + L.map(o => {
-    const steps = [['Applied', o.applied], ['IPO close date', o.close], ['Allotment date', o.allot], [o.status==='allotted' ? 'Funds debited' : o.status==='not' ? 'Funds unblocked' : 'Funds unblock or debit', o.unblock], ['Tentative listing date', o.listing]];
-    let cur = steps.findIndex(([,d]) => d && d > today); if(o.status!=='pending' && cur > -1 && cur < 4) cur = 4; if(cur < 0) cur = 5;
-    const st = o.status==='allotted' ? `<span class="chip g">Allotted · ${mi(o.allotted)}</span>` : o.status==='not' ? '<span class="chip">Not allotted · released</span>' : `<span class="chip w">On hold · ${mi(o.amount)}</span>`;
-    return `<div class="ipo"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="t">${esc(o.name)}</div><div class="sub">From ${esc(acc(o.from)?.name || '?')}</div></div>${st}</div>
-      <div class="tl">${steps.map(([l, d], i) => `<div class="st ${i < cur || (i===cur && d===today && i < 2) ? 'done' : i===cur ? 'now' : ''}"><div class="dt">${i < cur ? '✓' : ''}</div><div><div class="nm2">${l}</div><div class="dd">${f(d)}</div></div></div>`).join('')}</div>
-      <div class="row">${o.status==='pending' ? `<button class="sm good" onclick="ipoResult('${o.id}','ask')">Allotted</button><button class="sm" onclick="ipoResult('${o.id}',0)">Not allotted</button>` : ''}<button class="sm ghost" onclick="ipoDel('${o.id}')">Remove</button></div></div>`; }).join('');
+  const today = ISO(new Date()), L = (S.ipos || []).filter(o => !['allotted','not'].includes(o.status) || !o.listing || o.listing >= today || leftOf(o) > .5).slice().sort((a, b) => (a.open || a.applied || '').localeCompare(b.open || b.applied || ''));
+  const head = `<div class="wh" style="margin-top:6px"><span class="eyebrow">IPOs</span><span><button class="sm ghost" onclick="holModal()">Holidays</button> <button class="sm ghost" onclick="transitModal()">+ On the way</button> <button class="sm" onclick="ipoModal()">+ IPO</button></span></div>`;
+  return trListHTML() + head + (L.length ? '' : '<div class="sub" style="padding:4px 2px 10px">Plan an IPO before bidding opens to see if you have enough, or apply to put the money on hold.</div>') + L.map(o => {
+    const need = o.status==='pending' || o.status==='result' ? o.amount || ipoNeed(o) : ipoNeed(o), [sl, sc] = IPST[o.status] || ['', ''];
+    const steps = [['Bidding opens', o.open || o.applied], ['Bidding closes', o.close], ['Allotment', o.allot], [o.status==='allotted' ? 'Funds debited' : o.status==='not' ? 'Funds released' : 'Funds unblock or debit', o.unblock], ['Listing', o.listing]];
+    let cur = steps.findIndex(([, d]) => d && d > today); if(['allotted','not'].includes(o.status) && cur > -1 && cur < 4) cur = 4; if(cur < 0) cur = 5;
+    const amtTxt = o.status==='allotted' ? mi(o.allotted) : o.status==='not' ? 'released' : mi(need);
+    const short = o.status==='planned' ? need - freeOn(o.from, o.close || today) : 0;
+    const bids = o.bids ? `<div class="sub">Lot ${o.lot} · ₹${o.lo}–${o.hi} · ${o.bids.map((b, i) => `bid ${i + 1}: ${b.lots}×${o.lot} at ${b.cutoff ? 'cut-off' : '₹' + b.price}${b.cat!=='reg' ? ' (' + ICAT[b.cat][0].replace(/ \(.*\)/, '') + ')' : ''}${o.res && o.res.lots ? (o.res.lots[i] ? ' ✓' + o.res.lots[i] : ' ✗') : ''}`).join(' · ')}</div>` : '';
+    const funds = (o.funds || []).length ? `<div class="sub">Brought in: ${o.funds.map(f => `${esc(f.k==='lend' ? f.person + ' (borrowed)' : acc(f.src)?.name || '?')} ${mi(f.amt)}${f.tid && !((S.transit || []).find(x => x.id===f.tid) || {}).done ? ' · on the way' : ''}`).join(', ')}</div>` : '';
+    const B = (l, js, c = '') => `<button class="sm ${c}" onclick="${js}">${l}</button>`;
+    const acts = { planned: B('Apply now', `ipoApply('${o.id}')`, 'good') + (short > .004 ? B('Find the money', `fundModal('${o.id}')`) : ''), pending: B('Mark result', `ipoResultModal('${o.id}')`, 'good'), result: B('Confirm debit / release', `ipoSettleModal('${o.id}')`, 'good'), allotted:'', not:'' }[o.status] || '';
+    return `<div class="ipo"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="t">${esc(o.name)}</div><div class="sub">${o.status==='planned' ? 'Will block from' : 'From'} ${esc(acc(o.from)?.name || '?')}</div></div><span class="chip ${sc}">${sl} · ${amtTxt}</span></div>
+      ${bids}${funds}${short > .004 ? `<div class="sub neg">Short by ${mi(short)} by the closing day</div>` : ''}
+      <div class="tl">${steps.map(([l, d], i) => `<div class="st ${i < cur ? 'done' : i===cur ? 'now' : ''}"><div class="dt">${i < cur ? '✓' : ''}</div><div><div class="nm2">${l}</div><div class="dd">${fD(d)}</div></div></div>`).join('')}</div>
+      ${['planned','pending'].includes(o.status) ? scenHTML(o) : ''}
+      <div class="row">${acts}${leftOf(o) > .5 ? B(`Leftover ${mi(leftOf(o))}`, `leftModal('${o.id}')`, 'pri') : ''}${['planned','pending'].includes(o.status) && o.bids ? B('Edit', `ipoModal('','${o.id}')`) : ''}${o.status==='pending' ? B('More money', `fundModal('${o.id}')`, 'ghost') : ''}${B('Remove', `ipoDel('${o.id}')`, 'ghost')}</div></div>`; }).join('');
 }
 /* logo upload: kept as it is, or restyled round with a soft glow */
 function logoField(a){ V.logoRaw = null; V.logoData = undefined; V.logoHue = platHue(a || { name:'?' });
@@ -2237,7 +2582,7 @@ function platOpts(sel){
 }
 function platPick(el){ if(el.value==='other'){ closeModal(); platformModal(); } }
 function platResolve(v){ if(!v || !v.startsWith('new:')) return v; const pr = PRESETS.find(p => p.key===v.slice(4)); return pr ? addPreset(pr, 0).id : ''; }
-const growwId = () => (S.accounts.find(a => a.type==='invest' && (a.brand || guessBrand(a.name))==='groww') || {}).id;
+const growwId = () => (S.accounts.find(a => a.type==='invest' && ((a.brand || guessBrand(a.name))==='groww' || /groww/i.test(a.name))) || {}).id;
 function addMonths(iso, n){ const d = new Date(iso + 'T00:00:00'), day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return ISO(d); }
 function raaModal(id){
   const a = acc(id), r = a.raa || {}, banks = S.accounts.filter(x => x.type==='bank' && !x.inactive), def = r.bank || (banks.find(x => (x.brand || guessBrand(x.name))==='canara') || banks[0] || {}).id;
@@ -2641,7 +2986,7 @@ function actsFor(key){
   if(k==='upi') return `<div class="acts">${B('Pay',`payWithApp('${q}')`)}${B('Transactions',`histForApp('${q}')`)}${B('Balance',`upiBalances('${q}')`)}${B('Link bank',`linkModal('${q}')`)}</div>`;
   if(k==='cb') return `<div class="acts">${meth(id)?.cb?.monthCap ? B('Earned so far',`priorCbModal('${id}')`) : ''}${B('Add reward',`rewardModal('${id}')`)}${B('Mark received',`claimCb(${Math.round(cbPending()*100)/100})`)}${B('History',`histForMethod('${id}')`)}${B('Edit rule',`methModal('${id}')`)}</div>`;
   if(k==='add') return `<div class="acts">${B('Add platform','platformModal()')}</div>`;
-  if(k==='inv') return `<div class="acts">${B('Withdraw',`moveModal('${id}','out')`)}${B('Add money',`moveModal('${id}','in')`)}${acc(id)?.reserve ? '' : B('IPO',`ipoModal()`)}${acc(id)?.reserve ? '' : B('Auto-refund',`raaModal('${id}')`)}${B('Holdings',`holdingsModal('${id}')`)}${B('Add holding',`holdingModal('${id}')`)}${B('Details',`flipKey('${key}')`)}</div>`;
+  if(k==='inv') return `<div class="acts">${B('Withdraw',`moveModal('${id}','out')`)}${B('Add money',`moveModal('${id}','in')`)}${acc(id)?.reserve ? '' : B('IPO',`ipoModal()`)}${acc(id)?.reserve ? '' : B('Auto-refund',`raaModal('${id}')`)}${B('Holdings',`holdingsModal('${id}')`)}${(acc(id)?.holdings || []).length ? B('Sell / redeem',`redeemModal('${id}')`) : ''}${B('Add holding',`holdingModal('${id}')`)}${B('Details',`flipKey('${key}')`)}</div>`;
   return '';
 }
 const cbPending = () => Math.max(0, live().reduce((s,t) => s + (t.cb||0), 0) - live().filter(t => t.cbClaim).reduce((s,t) => s + t.amount, 0));
@@ -2847,7 +3192,7 @@ function initVideo(){
 
 /* ---------- Android app: notifications, back button ---------- */
 const hashId = k => { let h = 7; for(const c of k) h = (h*31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 2000000000 + 1; };
-const NOTIF_TYPES = [['upi','UPI daily limit reached'],['minbal','Bank balance below its minimum'],['cards','Credit card bills'],['reminders','My monthly reminders'],['fixed','Autopay, EMI and payments due'],['ipo','IPO: day before, allotment, debit / unblock, and a follow-up'],['refund','Groww auto-refund dates'],['maturity','FD / RD maturity'],['cashback','Unused cashback cap near month end'],['benefit','Card benefits about to expire, and your year in benefits'],['gift','Gift cards about to expire'],['events','Upcoming costs and events'],['balance','Monthly balance check (1st of the month)'],['weekly','Weekly money check (Sunday evening)']];
+const NOTIF_TYPES = [['upi','UPI daily limit reached'],['minbal','Bank balance below its minimum'],['cards','Credit card bills'],['reminders','My monthly reminders'],['fixed','Autopay, EMI and payments due'],['ipo','IPO: bidding opens and closes, allotment, debit / unblock, listing day, and follow-ups'],['transit','Money on the way (withdrawals, sales) – when it should arrive'],['refund','Groww auto-refund dates'],['maturity','FD / RD maturity'],['cashback','Unused cashback cap near month end'],['benefit','Card benefits about to expire, and your year in benefits'],['gift','Gift cards about to expire'],['events','Upcoming costs and events'],['balance','Monthly balance check (1st of the month)'],['weekly','Weekly money check (Sunday evening)']];
 NOTIF_TYPES.push(NOTIF_TYPES.shift(), NOTIF_TYPES.shift());
 const nHour = () => S.nHour ?? 9, cardLead = () => S.cardLead ?? 3, ntOn = k => k==='weekly' ? (S.nt || {}).weekly === true : (S.nt || {})[k] !== false;
 function setNt(k, v){ S.nt = S.nt || {}; S.nt[k] = v; save(); scheduleNotifs(); }
@@ -2864,10 +3209,17 @@ function notifEvents(days = 45){
     leadOf('cards').forEach(L => at(back(d, L), 'N', `${a.name}: bill due ${whenTxt(L)}`, L===0 ? 'Pay at least the minimum today to avoid a late fee.' : 'Open TrackMe to see the amount and pay on time.', `c${L}${a.id}${ISO(d)}`)); } });
   if(ntOn('reminders')) S.reminders.forEach(r => { for(let m = 0; m < 3; m++){ const d = dayIn(t0.getFullYear(), t0.getMonth() + m, r.day); if(r.done && r.done[ym(d)]) continue; leadOf('reminders').forEach(L => at(back(d, L), 'N', L===0 ? r.title : `${r.title} (${whenTxt(L)})`, 'Monthly reminder', `r${L}${r.id}${ISO(d)}`)); } });
   if(ntOn('fixed')) fxDue(days).forEach(x => leadOf('fixed').forEach(L => at(back(x.d, L), 'N', `${x.f.emi ? 'EMI' : x.f.auto ? 'Autopay' : 'Payment due'} ${whenTxt(L)}: ${x.f.title}`, x.f.auto ? 'Recorded automatically on the due date – keep enough balance.' : 'Open TrackMe to record it.', `f${L}${x.f.id}${x.k}`)));
-  if(ntOn('ipo')) (S.ipos || []).filter(o => o.status==='pending').forEach(o => { const D = x => new Date(x + 'T00:00:00');
-    if(o.allot) leadOf('ipo').forEach(L => at(back(D(o.allot), L), L===0 ? 10 : 'N', `IPO allotment ${whenTxt(L)}: ${o.name}`, L===0 ? 'Check your app, then tap Allotted or Not allotted in TrackMe.' : 'Your money stays on hold until the allotment.', `ib${L}${o.id}`));
-    if(o.unblock){ if(o.unblock!==o.allot) at(D(o.unblock), 10, `IPO funds debit / unblock today: ${o.name}`, 'Allotted: the money is debited. Not allotted: it is released. Confirm it in TrackMe.', `iu${o.id}`);
-      at(new Date(D(o.unblock).getTime() + DAY), 'N', `IPO: did you confirm ${o.name}?`, 'Open TrackMe and tap Allotted or Not allotted so your balance is right.', `if${o.id}`); } });
+  if(ntOn('ipo')) (S.ipos || []).forEach(o => { const D = x => new Date(x + 'T00:00:00'), nx = x => ISO(nextWork(D(x)));
+    if(o.status==='planned'){ if(o.open) at(D(o.open), 9, `IPO opens today: ${o.name}`, 'Check your free money in the app, then apply.', `io${o.id}`);
+      if(o.close && o.close!==o.open) at(D(o.close), 10, `Last day to bid: ${o.name}`, 'Bidding closes today – the UPI mandate must be approved by 5 pm.', `ic${o.id}`); }
+    if(o.status==='pending'){ if(o.allot){ leadOf('ipo').forEach(L => at(back(D(o.allot), L), L===0 ? 10 : 'N', `IPO allotment ${whenTxt(L)}: ${o.name}`, L===0 ? 'Check your app, then mark the result.' : 'Your money stays on hold until the allotment.', `ib${L}${o.id}`));
+        at(D(nx(o.allot)), 10, `Allotment out for ${o.name}?`, 'It can come a day late. Check again and mark the result.', `ia${o.id}`); }
+      if(o.unblock){ if(o.unblock!==o.allot) at(D(o.unblock), 10, `IPO funds debit / unblock today: ${o.name}`, 'Mark the result, then confirm what the bank did.', `iu${o.id}`);
+        at(D(nx(o.unblock)), 'N', `IPO: did you confirm ${o.name}?`, 'Open the app and mark the result so your balance is right.', `if${o.id}`); } }
+    if(o.status==='result'){ const d0 = o.late || o.unblock || ISO(t0); at(D(d0), 10, `IPO money: ${o.name}`, 'Debit or release should be done today. Confirm it in the app.', `ir${o.id}${d0}`); at(D(nx(d0)), 10, `Still waiting on ${o.name}?`, 'Debit or release can be a day late. Check your bank app and confirm.', `iq${o.id}${d0}`); }
+    if(o.listing && ['pending','result','allotted'].includes(o.status)) [7, 8, 9].forEach(h => at(D(o.listing), h, `${o.name} lists today`, 'Listing at 10:00. Check Groww to trade or keep.', `il${h}${o.id}`)); });
+  if(ntOn('transit')) trList().forEach(x => { const e = new Date(x.exp), f = nextWork(e); f.setHours(10, 0, 0, 0);
+    [[e, 'Money should be in your bank now'], [f, 'Not marked yet – it can be a day late. Check your bank app.']].forEach(([d, b], i) => { if(d > now && d <= lim) out.push({ at:d, title:`Money on the way: ${trName(x)}`, body:b, key:`tr${i}${x.id}${x.exp}`, act:'TRANSIT', extra:{ tid:x.id } }); }); });
   if(ntOn('refund')) S.accounts.filter(a => a.type==='invest' && a.raa && a.raa.cycle!=='off' && a.raa.next).forEach(a => { const d = new Date(a.raa.next + 'T00:00:00');
     leadOf('refund').forEach(L => at(back(d, L), 'N', `${a.name}: auto-refund ${whenTxt(L)}`, L===0 ? 'Tap Record refund in TrackMe when it reaches your bank.' : `Unused balance goes back to ${acc(a.raa.bank)?.name || 'your bank'}.`, `ra${L}${a.id}${a.raa.next}`)); });
   if(ntOn('maturity')) S.accounts.filter(a => a.type==='invest').forEach(a => (a.holdings || []).filter(h => (h.type==='fd' || h.type==='rd') && h.start).forEach(h => { const d = maturityOf(h); if(d) leadOf('maturity').forEach(L => at(back(d, L), 'N', `${h.name || HTYPES[h.type]} matures ${whenTxt(L)}`, `${a.name} – decide to renew or withdraw.`, `m${L}${h.id}`)); }));
@@ -2896,7 +3248,7 @@ async function triggerAlerts(){
 function rNotifs(){
   const ev = notifEvents(), byDay = {}; ev.forEach(e => { const k = ISO(e.at); (byDay[k] = byDay[k] || []).push(e); });
   const hr = h => h < 12 ? h + ':00 am' : h===12 ? '12:00 pm' : (h - 12) + ':00 pm', tm = d => d.toLocaleTimeString('en-IN', { hour:'numeric', minute:'2-digit', hour12:true });
-  const info = { cards:'Before each credit-card due date', reminders:'Before each of your monthly reminders', fixed:'Before the due date of autopay, EMI and fixed payments', ipo:'Before the IPO allotment day. Debit / unblock day and a next-day nudge are always sent', refund:'Before the Groww auto-refund date', maturity:'Before an FD / RD matures', events:'Before each upcoming cost or event, using the days you chose for that item', gift:'Before a gift card with a valid-till date expires, only while it still has balance', benefit:'Before an unclaimed benefit runs out (end of its month, quarter or year, or its valid-till date). On 28 December you also get your year in benefits', cashback:'Days before the month ends, only for cards whose cashback cap is not used up', balance:'A reminder to compare your bank apps with TrackMe', weekly:'A quiet nudge once a week to tick off pending items and glance at what is coming up. No amounts', upi:'Sent right after you record a payment that reaches the limit. The app only knows what you record', minbal:'Sent right after you record a payment that leaves a bank or wallet below its minimum balance' };
+  const info = { cards:'Before each credit-card due date', reminders:'Before each of your monthly reminders', fixed:'Before the due date of autopay, EMI and fixed payments', ipo:'Before the IPO allotment day. Also: bidding opens (9 am) and closes, debit / unblock day, a next-day nudge when allotment or the debit is late, and listing day at 7, 8 and 9 am', transit:'At the expected time, with an Arrived button, and again the next working day if you have not marked it', refund:'Before the Groww auto-refund date', maturity:'Before an FD / RD matures', events:'Before each upcoming cost or event, using the days you chose for that item', gift:'Before a gift card with a valid-till date expires, only while it still has balance', benefit:'Before an unclaimed benefit runs out (end of its month, quarter or year, or its valid-till date). On 28 December you also get your year in benefits', cashback:'Days before the month ends, only for cards whose cashback cap is not used up', balance:'A reminder to compare your bank apps with TrackMe', weekly:'A quiet nudge once a week to tick off pending items and glance at what is coming up. No amounts', upi:'Sent right after you record a payment that reaches the limit. The app only knows what you record', minbal:'Sent right after you record a payment that leaves a bank or wallet below its minimum balance' };
   const chips = k => `<div class="row" style="gap:6px;margin:4px 0 2px 34px">${NLEAD.map(d => `<button class="sm ${leadOf(k).includes(d) ? 'pri' : ''}" onclick="toggleLead('${k}',${d})">${d===0 ? 'On the day' : d + 'd before'}</button>`).join('')}<span class="sub" style="align-self:center">${leadOf(k).length} reminder${leadOf(k).length>1?'s':''} each time</span></div>`;
   const sel = (k, key, opts, cur, fmt) => `<select onchange="setNc('${k}','${key}',+this.value)">${opts.map(o => `<option value="${o}" ${o===cur?'selected':''}>${fmt(o)}</option>`).join('')}</select>`;
   const extra = k => !ntOn(k) ? '' : NDEF[k] ? chips(k)
@@ -2927,7 +3279,8 @@ async function scheduleNotifs(){
     const pend = await LN.getPending(); if(pend.notifications && pend.notifications.length) await LN.cancel({ notifications: pend.notifications.map(n => ({ id:n.id })) });
     if(S.notifs===false) return;
     let perm = await LN.checkPermissions(); if(perm.display!=='granted') perm = await LN.requestPermissions(); if(perm.display!=='granted') return;
-    const ev = notifEvents(); if(ev.length) await LN.schedule({ notifications: ev.map(e => ({ id:hashId(e.key), title:e.title, body:e.body, schedule:{ at:e.at, allowWhileIdle:true } })) });
+    if(LN.registerActionTypes) await LN.registerActionTypes({ types:[{ id:'TRANSIT', actions:[{ id:'arrived', title:'Arrived' }, { id:'later', title:'Not yet' }] }] }).catch(() => {});
+    const ev = notifEvents(); if(ev.length) await LN.schedule({ notifications: ev.map(e => Object.assign({ id:hashId(e.key), title:e.title, body:e.body, schedule:{ at:e.at, allowWhileIdle:true } }, e.act ? { actionTypeId:e.act, extra:e.extra } : {})) });
     await triggerAlerts();
   }catch(e){}
 }

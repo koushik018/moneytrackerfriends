@@ -101,15 +101,64 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
 - In Edit / Add account, or in the Edit screen of any card or payment method (it belongs to the account the card pays from), tick **A deposit is needed to keep an offer** and enter the amount, the day of the month and what it keeps active. You get a monthly reminder (days before are editable under Notifications); Record asks whose money it was and what happened after, so totals stay right. Untick it to remove the reminder.
 
 
-## IPO
-1. Apply: name, amount, money from (platform balance or bank UPI block), schedule dates
-   (applied, close, allotment, funds unblock/debit, listing).
-2. The amount goes **on hold**: the balance still shows it (as the bank SMS does) but it is not free
-   to spend, withdraw or use for another IPO. Net worth does not change.
-3. Allotment day: alert with **Allotted** / **Not allotted**.
-   - Allotted: the amount actually debited leaves the account and becomes a stock holding in the
-     platform; any rest of a partial allotment is released.
-   - Not allotted: the hold is released.
+## IPO (Investments → IPOs)
+1. **Plan or apply.** Name, lot size, price band, bidding open / close, allotment, unblock / debit
+   and listing dates, the bank the money is blocked from, and where the shares go.
+   - **Save as plan** before bidding opens: no money moves; you are reminded when bidding opens.
+   - **Apply now** puts the money **on hold** (UPI block). The balance still shows it, as the bank
+     SMS does, but it is not free to spend, withdraw or use for another IPO.
+2. **Several bids per IPO.** Each bid has a category, lots (− / + stepper), a price or
+   **At cut-off price**; shares and amount are worked out (lots × lot size × price).
+   - Categories: Regular (retail, up to ₹2,00,000), Employee (up to ₹5,00,000),
+     Shareholder (up to ₹2,00,000), HNI (above ₹2,00,000, up to ₹5,00,000).
+     Limits can be changed per IPO under **Category limits**.
+   - HNI: the lots needed to cross ₹2,00,000 are filled in, cut-off is not allowed, and a warning
+     says HNI applications cannot be cancelled or lowered.
+   - Warnings for prices outside the band, more than 3 retail bids, or a category over its limit.
+3. **Funds check** while filling the form: free in the bank now, free by the closing day (money on
+   the way counted on its expected date), and the shortfall.
+4. **Find the money**: add one or more sources (**+ Add another source**):
+   - another bank, wallet or cash (moved now);
+   - unused Groww cash (withdraw first: **Standard** or **Instant**, with charges);
+   - sell or redeem an investment (shares, fund, gold, FD; full or part, charges, working days);
+   - borrow from a person (recorded in People, not income).
+   Other IPOs still on hold in the same bank are listed as not counted yet.
+5. **What if** table: 0, 1, 2 … lots allotted → debited, released, free after the unblock day,
+   and whether the **next planned IPO** (for example the one opening the day after) is covered.
+6. **Result.** Mark how many lots each bid got and the final issue price; the debit and release
+   are worked out. Then: **Yes – it is done** (pick the account) or **Not yet** (you are reminded on
+   the debit day and the next working day, because it can be a day late).
+   The debit becomes a stock holding (with the number of shares) in the platform.
+7. **Leftover.** If you brought money in, what is free again is shown with rows already filled
+   with where it came from (lenders first). Change, split, add accounts, send all to one account,
+   or keep it. Paying a lender is recorded in People.
+8. Older IPOs saved before this version keep working (amount-based result).
+
+## Money on the way
+1. A withdrawal or sale that lands later: from (Groww, a bank or an investment), to (bank),
+   amount, charges, and **Standard**, **Instant** or **My own date**.
+   - Standard: processed the next working day, around 10–11 am. A Friday-evening, Saturday or
+     Sunday request arrives on Monday; market holidays are skipped.
+   - Instant: about 5 minutes (cannot be cancelled, may have a fee).
+   - Sale of shares: T+1. Funds, gold and FDs: the working days you set.
+2. **Withdraw** on Groww asks when it reaches the bank (Already there / Standard / Instant).
+   **Sell / redeem** on a platform with holdings creates one for a holding.
+3. Nothing changes in balances until you tap **Arrived** (amount, bank, time). It is recorded as a
+   move between your own accounts; charges are a small expense. Groww cash already asked for is
+   not counted as free.
+4. Notification at the expected time with **Arrived** / **Not yet** buttons, and again the next
+   working day. Tapping Arrived opens the confirm screen after you unlock – nothing is recorded
+   from the lock screen.
+
+## Market holidays (Investments → IPOs → Holidays)
+1. The 2026 exchange holidays come with the app (it has no internet). Add or remove days; restore
+   the list any time. The 2027 list is added when the exchanges announce it (usually December).
+
+## IPO notifications
+- Bidding opens (9 am) and the last day to bid (10 am) for a planned IPO.
+- Allotment (days before you choose, and 10 am on the day), plus a next-day nudge if not marked.
+- Debit / unblock day, and the next working day if not confirmed.
+- Listing day at 7, 8 and 9 am: "Listing at 10:00. Check Groww to trade or keep."
 
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
