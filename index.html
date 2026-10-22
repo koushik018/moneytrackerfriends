@@ -1321,6 +1321,9 @@ function revert(id){
   { const rid = t.remRef || (/^Monthly credit to /.test(t.desc||'') ? (S.reminders.find(r => r.accountId===t.to && r.autoAmt) || {}).id : null), r = rid && S.reminders.find(x => x.id===rid);
     if(r){ r.done = r.done || {}; const m = ym(t.ts); if(t.reverted) delete r.done[m]; else r.done[m] = true; } }
   if(t.planRef){ const p = S.plans.find(x => x.id===t.planRef); if(p) p.done = !t.reverted; }
+  if(t.type==='invest' && t.ipoId){ const o = (S.ipos || []).find(x => x.id===t.ipoId), plat = o && acc(o.plat);
+    if(o && t.reverted && o.status==='allotted'){ if(plat){ o.undoH = (plat.holdings || []).filter(h => h.ipoId===o.id); plat.holdings = (plat.holdings || []).filter(h => h.ipoId!==o.id); } o.status = 'result'; o.res = o.res || { debit:t.amount, lots:null }; const h = S.txns.find(x => x.id===o.txn); if(h) h.released = false; }
+    else if(o && !t.reverted && o.status==='result'){ if(plat && o.undoH) plat.holdings = (plat.holdings || []).concat(o.undoH); delete o.undoH; o.status = 'allotted'; const h = S.txns.find(x => x.id===o.txn); if(h) h.released = true; } }
   if(t.fixedRef){ const f = S.fixed.find(x => x.id===t.fixedRef); if(f){ f.paid = f.paid||{}; if(t.reverted) delete f.paid[t.due]; else f.paid[t.due] = t.id; } }
   save(); render(); toast(t.reverted ? 'Reverted – balances restored' : 'Restored');
 }
@@ -2515,7 +2518,7 @@ const blankBid = (o, cat = 'reg') => ({ id:uid(), cat, lots: cat==='hni' && o.lo
 function ipoModal(platId, id){
   const o = id ? (S.ipos || []).find(x => x.id===id) : null, plat = acc(o ? o.plat : platId) || acc(growwId()) || null, d = n => ISO(new Date(Date.now() + n*864e5));
   const banks = S.accounts.filter(x => ['bank','wallet'].includes(x.type) && !x.inactive), invs = S.accounts.filter(x => x.type==='invest' && !x.inactive && !x.reserve);
-  const defSrc = o ? o.from : (plat && plat.raa && plat.raa.bank) || (banks[0] || {}).id || (plat && plat.id);
+  const defSrc = o ? o.from : (plat && plat.raa && plat.raa.bank) || (banks[0] || {}).id;
   V.ie = o ? JSON.parse(JSON.stringify(o)) : { lot:'', lo:'', hi:'', bids:[], lim:{} }; if(!V.ie.bids || !V.ie.bids.length) V.ie.bids = [blankBid(V.ie)];
   const e = V.ie, held = o && o.status==='pending';
   openModal(o ? `Edit ${esc(o.name)}` : 'IPO – plan or apply', `<div class="sub">Copy the numbers from the IPO page in your app. Save it as a <b>plan</b> before bidding opens (no money moves), or <b>apply</b> to put the money on hold. Like your bank shows it, the balance stays the same but the amount is not free to spend until the result.</div>
@@ -2526,7 +2529,8 @@ function ipoModal(platId, id){
     <details style="margin-top:4px"><summary>Category limits</summary><div class="sub" style="margin:8px 0">Usual limits per application. Change them if this IPO's page says something else. HNI must be above ${inr(HNI_MIN)}.</div>
       <div class="row">${Object.keys(ICAT).map(c => `<label class="f">${ICAT[c][0].replace(/ \(.*\)/, '')} up to (₹)<input id="ip_lim_${c}" type="number" value="${ipoLim(e, c)}" oninput="ipUI()"></label>`).join('')}</div></details>
     <div id="ip_sum" class="card" style="padding:12px 14px;gap:6px"></div>
-    <label class="f">Money is blocked from<select id="ip_f" onchange="ipUI()" ${held ? 'disabled' : ''}>${banks.map(x => `<option value="${x.id}" ${x.id===defSrc?'selected':''}>${esc(x.name)} · ${inr(freeOf(x.id))} free (UPI block)</option>`).join('')}${invs.map(x => `<option value="${x.id}" ${x.id===defSrc?'selected':''}>${esc(x.name)} balance · ${inr(freeOf(x.id))} free</option>`).join('')}</select></label>
+    <label class="f">Bank the money is blocked in (UPI)<select id="ip_f" onchange="ipUI()" ${held ? 'disabled' : ''}>${banks.map(x => `<option value="${x.id}" ${x.id===defSrc?'selected':''}>${esc(x.name)} · ${inr(freeOf(x.id))} free</option>`).join('')}${acc(defSrc) && acc(defSrc).type==='invest' ? `<option value="${defSrc}" selected>${esc(acc(defSrc).name)} (old entry – use Change bank)</option>` : ''}</select></label>
+    <div class="sub">The UPI mandate blocks money in your <b>bank</b>. Money in the Groww balance has to be withdrawn to the bank first – <b>Find the money</b> does that for you.</div>
     <label class="f">Shares go to<select id="ip_p" onchange="platPick(this)">${platOpts(plat ? plat.id : 'new:groww')}</select></label>
     <div class="row"><label class="f">Bidding opens<input id="ip_d0" type="date" value="${e.open || e.applied || d(0)}" onchange="ipUI()"></label><label class="f">Bidding closes<input id="ip_d1" type="date" value="${e.close || d(2)}" onchange="ipUI()"></label></div>
     <div class="row"><label class="f">Allotment date<input id="ip_d2" type="date" value="${e.allot || d(3)}"></label><label class="f">Funds unblock or debit<input id="ip_d3" type="date" value="${e.unblock || d(4)}" onchange="ipUI()"></label></div>
@@ -2671,7 +2675,7 @@ function scenHTML(o){
 /* result: which bids got shares, then (now or on the debit day) record the debit and release */
 function ipoResult(id, got){ if(got===0) return ipoResultModal(id, true); return ipoResultModal(id); }
 function ipoResultModal(id, none){
-  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const due = !o.unblock || o.unblock <= ISO(new Date()), banks = S.accounts.filter(x => ['bank','wallet','invest'].includes(x.type) && !x.inactive);
+  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const due = !o.unblock || o.unblock <= ISO(new Date()), banks = S.accounts.filter(x => ['bank','wallet'].includes(x.type) && !x.inactive);
   V.ir = { id, lots: o.res && o.res.lots ? o.res.lots.slice() : (o.bids || []).map((b, i) => !none && i===0 ? 1 : 0) };
   openModal(`${esc(o.name)} – result`, `<div class="sub">Check the allotment in your app and mark how many lots each bid got. ${o.bids && o.bids.filter(b => b.cat==='reg').length > 1 ? 'When an IPO is oversubscribed, a retail application gets at most 1 lot in total.' : ''}</div>
     ${o.bids ? `<div class="list">${o.bids.map((b, i) => `<div class="item"><div class="l"><div class="t">Bid ${i + 1} · ${ICAT[b.cat][0].replace(/ \(.*\)/, '')}</div><div class="sub">${b.lots} lot${b.lots>1?'s':''} · ${b.lots * o.lot} shares at ${b.cutoff ? 'cut-off' : inr(b.price)}</div></div><div class="r"><span class="stepper"><button type="button" class="sm" onclick="irLot(${i},-1)" aria-label="Fewer">−</button><b id="ir_l${i}" style="min-width:26px;text-align:center">${V.ir.lots[i]}</b><button type="button" class="sm" onclick="irLot(${i},1)" aria-label="More">+</button></span></div></div>`).join('')}</div>
@@ -2698,7 +2702,7 @@ function irSave(id){
   if(!V.ir.moved){ o.status = 'result'; save(); closeModal(); scheduleNotifs(); render(); return toast(c.debit ? 'Allotted – confirm the debit when the bank does it' : 'Not allotted – confirm when the money is released'); }
   ipoSettle(o, mv('ir_b'));
 }
-function ipoSettleModal(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o || !o.res) return; const banks = S.accounts.filter(x => ['bank','wallet','invest'].includes(x.type) && !x.inactive);
+function ipoSettleModal(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o || !o.res) return; const banks = S.accounts.filter(x => ['bank','wallet'].includes(x.type) && !x.inactive);
   openModal(`${esc(o.name)} – did the bank do it?`, `<div class="sub">${o.res.debit ? `<b>${inr(o.res.debit)}</b> should be debited and <b>${inr(Math.max(0, ipoNeed(o) - o.res.debit))}</b> released.` : `All <b>${inr(ipoNeed(o))}</b> should be released.`} Check your bank app – it can take a day longer than planned.</div>
     <label class="f">Account<select id="is_b">${banks.map(x => `<option value="${x.id}" ${x.id===o.from?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
     <div class="row"><button class="pri good" onclick="ipoSettle((S.ipos||[]).find(x=>x.id==='${id}'), mv('is_b'))">Yes, it is done</button><button onclick="ipoNotYet('${id}')">Not yet</button><button class="ghost" onclick="ipoResultModal('${id}')">Change the result</button></div>`); }
@@ -2744,6 +2748,36 @@ function loSave(){
     else S.txns.push({ id:uid(), ts:ts + i, type:'transfer', amount:a, desc:`IPO leftover – ${o.name}`, cat:'Other', from:src, to:r.d }); });
   o.back = (o.back || 0) + sum; save(); closeModal(); haptic([8,30,12]); render(); toast(`${inr(sum)} placed`);
 }
+/* fix where an IPO's money was blocked: always a bank. Can also record the move from Groww that paid for it, and a missing debit */
+function ipoFromModal(id){
+  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const cur = acc(o.from), banks = S.accounts.filter(x => ['bank','wallet'].includes(x.type) && !x.inactive);
+  const src = cur && cur.type==='invest' ? cur : (acc(o.plat) || acc(growwId())), need = o.amount || ipoNeed(o), debit = S.txns.find(t => t.type==='invest' && t.ipoId===o.id && !t.reverted), def = cur && cur.type!=='invest' ? cur.id : ((src && src.raa && src.raa.bank) || (banks.find(b => (b.brand || guessBrand(b.name))==='canara') || banks[0] || {}).id);
+  if(!banks.length) return toast('Add your bank first');
+  openModal(`${esc(o.name)} – which bank?`, `<div class="sub">The UPI mandate blocks the money in a <b>bank</b>. On the result, the allotted amount is debited from that bank (it becomes shares in ${esc(acc(o.plat)?.name || 'your investments')}) and the rest is released back to the same bank.</div>
+    <label class="f">Money was blocked in<select id="if_b" onchange="ifUI()">${banks.map(b => `<option value="${b.id}" ${b.id===def ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select></label>
+    ${src ? `<label class="ck"><input type="checkbox" id="if_mv" ${cur && cur.type==='invest' ? 'checked' : ''} onchange="ifUI()"><span>I withdrew money from ${esc(src.name)} to this bank for it</span></label>
+    <div id="if_mvf" class="row"><label class="f">Amount withdrawn (₹)<input id="if_a" type="number" inputmode="decimal" value="${need}" oninput="ifUI()"></label><label class="f">Date<input id="if_d" type="date" value="${o.applied || o.open || ISO(new Date())}"></label></div>` : ''}
+    ${o.status==='allotted' && !debit ? `<label class="ck"><input type="checkbox" id="if_db" checked onchange="ifUI()"><span>Record the ${inr(o.allotted || 0)} debit from this bank again (it is missing)</span></label>` : ''}
+    <div class="card" id="if_sum" style="padding:12px 14px;gap:4px"></div>
+    <div class="row"><button class="pri" onclick="ifSave('${id}')">Save</button><button class="ghost" onclick="closeModal()">Cancel</button></div>`);
+  V.ifo = { id, src:src && src.id }; ifUI();
+}
+function ifPlan(){ const o = (S.ipos || []).find(x => x.id===V.ifo.id), b = mv('if_b'), mvOn = $('if_mv') && $('if_mv').checked, amt = mvOn ? parseFloat(mv('if_a')) || 0 : 0, db = $('if_db') && $('if_db').checked ? (o.allotted || 0) : 0, debit = S.txns.find(t => t.type==='invest' && t.ipoId===o.id && !t.reverted), moveDebit = debit && debit.from!==b ? debit.amount : 0, hold = ['pending','result'].includes(o.status) ? (o.amount || ipoNeed(o)) : 0;
+  return { o, b, amt, db, debit, moveDebit, hold, src:V.ifo.src }; }
+function ifUI(){ const P = ifPlan(), f = $('if_mvf'); if(f) f.style.display = $('if_mv') && $('if_mv').checked ? '' : 'none';
+  const bAfter = net(P.b) + P.amt - P.db - P.moveDebit, sAfter = P.src ? net(P.src) - P.amt : 0;
+  $('if_sum').innerHTML = `${P.src && P.amt ? `<div class="item" style="padding:3px 0"><span>${esc(acc(P.src).name)} balance after</span><b>${inr(sAfter)}</b></div>` : ''}<div class="item" style="padding:3px 0"><span>${esc(acc(P.b)?.name || '?')} balance after</span><b class="${bAfter < 0 ? 'neg' : ''}">${inr(bAfter)}</b></div>${P.hold ? `<div class="sub">${inr(P.hold)} stays on hold in ${esc(acc(P.b)?.name || '?')} until the result.</div>` : ''}${bAfter < 0 ? '<div class="sub neg">This would go below zero. Did the money reach this bank first? Tick the withdrawal above, or check the amount.</div>' : ''}<div class="sub">Afterwards compare with your bank and Groww apps; <b>Balance</b> on a card fixes any small difference.</div>`; }
+function ifSave(id){
+  const P = ifPlan(), o = P.o; if(!P.b) return toast('Pick the bank'); if($('if_mv') && $('if_mv').checked && !(P.amt > 0)) return toast('Enter the amount withdrawn');
+  const ts = tsFrom(mv('if_d') || ISO(new Date()));
+  if(P.amt > 0) S.txns.push({ id:uid(), ts, type:'transfer', amount:P.amt, desc:`Withdrawn from ${acc(P.src).name} for IPO ${o.name}`, cat:'Other', from:P.src, to:P.b, ipoFund:o.id });
+  const h = S.txns.find(t => t.id===o.txn); if(h) h.from = P.b;
+  if(P.debit && P.debit.from!==P.b) P.debit.from = P.b;
+  if(P.db > 0){ const plat = acc(o.plat); S.txns.push({ id:uid(), ts:o.settled || Date.now(), type:'invest', amount:P.db, desc:'IPO allotted: ' + o.name, cat:'Other', from:P.b, toName:(plat?.name || 'Shares') + ' (shares)', ipoId:o.id });
+    if(plat && !(plat.holdings || []).some(x => x.ipoId===o.id)) plat.holdings = (plat.holdings || []).concat({ id:uid(), type:'stocks', name:o.name + ' (IPO)', invested:P.db, value:P.db, valueAt:ISO(new Date()), ipoId:o.id }); }
+  o.from = P.b; if(o.settleBank) o.settleBank = P.b;
+  save(); closeModal(); haptic([8,30,12]); scheduleNotifs(); render(); toast(`${o.name}: now in ${acc(P.b).name}`);
+}
 function ipoDel(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o) return;
   ask('Remove this IPO?', o.status==='pending' || o.status==='result' ? 'The hold is removed and the money counts as free again. Money you already moved for it stays where it is.' : 'It is removed from the list. Shares already added stay in Holdings, and money you moved stays where it is.', 'Remove', () => { S.txns = S.txns.filter(t => !(t.id===o.txn && (o.status==='pending' || o.status==='result'))); S.ipos = S.ipos.filter(x => x.id!==id); save(); scheduleNotifs(); render(); }, true); }
 const IPST = { planned:['Planned', ''], pending:['On hold', 'w'], result:['Result in', 'w'], allotted:['Allotted', 'g'], not:['Not allotted', ''] };
@@ -2760,11 +2794,11 @@ function ipoListHTML(){
     const funds = (o.funds || []).length ? `<div class="sub">Brought in: ${o.funds.map(f => `${esc(f.k==='lend' ? f.person + ' (borrowed)' : acc(f.src)?.name || '?')} ${mi(f.amt)}${f.tid && !((S.transit || []).find(x => x.id===f.tid) || {}).done ? ' · on the way' : ''}`).join(', ')}</div>` : '';
     const B = (l, js, c = '') => `<button class="sm ${c}" onclick="${js}">${l}</button>`;
     const acts = { planned: B('Apply now', `ipoApply('${o.id}')`, 'good') + (short > .004 ? B('Find the money', `fundModal('${o.id}')`) : ''), pending: B('Mark result', `ipoResultModal('${o.id}')`, 'good'), result: B('Confirm debit / release', `ipoSettleModal('${o.id}')`, 'good'), allotted:'', not:'' }[o.status] || '';
-    return `<div class="ipo"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="t">${esc(o.name)}</div><div class="sub">${o.status==='planned' ? 'Will block from' : 'From'} ${esc(acc(o.from)?.name || '?')}</div></div><span class="chip ${sc}">${sl} · ${amtTxt}</span></div>
-      ${bids}${funds}${short > .004 ? `<div class="sub neg">Short by ${mi(short)} by the closing day</div>` : ''}
+    return `<div class="ipo"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="t">${esc(o.name)}</div><div class="sub">${o.status==='planned' ? 'Will be blocked in' : 'Blocked in'} ${esc(acc(o.from)?.name || '?')}${o.plat ? ' · shares to ' + esc(acc(o.plat)?.name || '?') : ''}</div></div><span class="chip ${sc}">${sl} · ${amtTxt}</span></div>
+      ${bids}${funds}${short > .004 ? `<div class="sub neg">Short by ${mi(short)} by the closing day</div>` : ''}${acc(o.from) && acc(o.from).type==='invest' ? `<div class="sub neg">This entry says the money was blocked in the ${esc(acc(o.from).name)} balance. IPO money is blocked in your bank – tap <b>Change bank</b> to fix it.</div>` : ''}${o.status==='allotted' && !S.txns.some(t => t.type==='invest' && t.ipoId===o.id && !t.reverted) ? '<div class="sub neg">The debit for these shares is missing from your history – tap <b>Change bank</b> to record it again.</div>' : ''}
       <div class="tl">${steps.map(([l, d], i) => `<div class="st ${i < cur ? 'done' : i===cur ? 'now' : ''}"><div class="dt">${i < cur ? '✓' : ''}</div><div><div class="nm2">${l}</div><div class="dd">${fD(d)}</div></div></div>`).join('')}</div>
       ${['planned','pending'].includes(o.status) ? scenHTML(o) : ''}
-      <div class="row">${acts}${leftOf(o) > .5 ? B(`Leftover ${mi(leftOf(o))}`, `leftModal('${o.id}')`, 'pri') : ''}${['planned','pending'].includes(o.status) && o.bids ? B('Edit', `ipoModal('','${o.id}')`) : ''}${o.status==='pending' ? B('More money', `fundModal('${o.id}')`, 'ghost') : ''}${B('Remove', `ipoDel('${o.id}')`, 'ghost')}</div></div>`; }).join('');
+      <div class="row">${acts}${leftOf(o) > .5 ? B(`Leftover ${mi(leftOf(o))}`, `leftModal('${o.id}')`, 'pri') : ''}${['planned','pending'].includes(o.status) && o.bids ? B('Edit', `ipoModal('','${o.id}')`) : ''}${o.status==='pending' ? B('More money', `fundModal('${o.id}')`, 'ghost') : ''}${o.status!=='planned' ? B('Change bank', `ipoFromModal('${o.id}')`, acc(o.from) && acc(o.from).type==='invest' ? 'pri' : 'ghost') : ''}${B('Remove', `ipoDel('${o.id}')`, 'ghost')}</div></div>`; }).join('');
 }
 /* logo upload: kept as it is, or restyled round with a soft glow */
 function logoField(a){ V.logoRaw = null; V.logoData = undefined; V.logoHue = platHue(a || { name:'?' });

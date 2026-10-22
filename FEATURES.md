@@ -133,6 +133,15 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
    with where it came from (lenders first). Change, split, add accounts, send all to one account,
    or keep it. Paying a lender is recorded in People.
 8. Older IPOs saved before this version keep working (amount-based result).
+9. **The money is always blocked in a bank** (UPI mandate). The Groww balance is no longer offered as
+   the place an IPO blocks money; Groww cash is withdrawn to the bank first (Find the money).
+   The debit on allotment comes from that bank and becomes shares in the platform's holdings;
+   the rest is released back to the same bank.
+10. **Change bank** on an IPO card fixes an older entry saved against the Groww balance: pick the
+    bank, optionally record the Groww → bank withdrawal that paid for it (amount and date), and
+    record a missing debit again. Balances after the change are shown before saving.
+11. Reverting an IPO's debit in History puts the IPO back to “confirm the debit” and takes its
+    shares out of holdings; restoring it puts them back.
 
 ## Money on the way
 1. A withdrawal or sale that lands later: from (Groww, a bank or an investment), to (bank),
