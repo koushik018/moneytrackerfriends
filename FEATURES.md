@@ -239,6 +239,35 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
   the charges with money on the way, and records them as a small expense when the money arrives (or at once
   when you pick Already there).
 
+## After listing: sold or kept (IPO)
+- From listing day an allotted IPO asks **Sold or kept?** (on its card, on Home, and a 4 pm notification).
+- Choose **Kept them** (optionally type today's price to see the value), **Sold all**, or **Sold some**
+  (shares sold, with quick buttons for whole lots – 1 lot = the IPO's lot size).
+- Enter the sell price per share and any charges. It shows what you received and the **gain or loss**
+  (₹ and %). The money goes to the platform balance; the shares left stay in holdings at what you paid.
+- The card keeps showing the result for 14 days; **Change** lets you correct it.
+
+## Paying back and getting paid back (Lent and owed)
+- Each person shows **Borrowed · paid back · left to pay** (or **Lent · got back · still to come**).
+- **Pay back** / **They paid back** opens the form already filled with what is left and the account(s)
+  the money first came into (or went out of) – change or split it if you like.
+
+## Wallets tab
+- Wallets have their own tab (no longer mixed with banks). A wallet that lives inside a UPI app also shows
+  on that app's card with its balance.
+
+## Cards: cashback and benefits in the Add guide
+- Debit and credit cards in the Add guide have **Cashback %**, max per payment and per month; credit cards
+  also take the **annual fee** and **benefits, one per line** (“4 lounge visits a year”, “1 movie ticket every
+  month”) – each line becomes a benefit you can tick off.
+
+## Logos, copy, backup reminder, instant warning
+- Upload your own logo for any account (Edit → Logo) and for any UPI app (UPI card → **Logo**).
+- The card back has **Copy** for the last 4 digits or IFSC (clipboard cleared after 30 seconds).
+- **Make a backup** on Home when the last encrypted backup is over 30 days old (or never), and a monthly
+  notification when it is over 3 weeks old.
+- An **Instant** withdrawal asks you to confirm, because it cannot be cancelled and may cost a fee.
+
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
 - A daily snapshot builds the "over time" chart.

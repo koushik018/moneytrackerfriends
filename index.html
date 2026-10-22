@@ -214,6 +214,7 @@ input:focus, select:focus { border-bottom-color:var(--accent); background:rgba(2
 select option { background:var(--solid); color:var(--text); }
 input[type=checkbox] { accent-color:var(--accent); }
 label.f { display:flex; flex-direction:column; gap:2px; flex:1; min-width:120px; }
+div.f { display:flex; flex-direction:column; gap:6px; text-transform:uppercase; letter-spacing:.14em; font-size:.66rem; font-weight:400; color:var(--muted); } div.f .seg label, div.f .row > span { text-transform:none; letter-spacing:.02em; font-size:.85rem; color:var(--text); } div.f .row > label.ck { flex:1 1 140px; } #lg_prev:empty { display:none; }
 .row { display:flex; gap:14px; flex-wrap:wrap; }
 button { border:1px solid var(--border); border-radius:2px; padding:11px 18px; background:transparent; color:var(--text); font:inherit; font-size:.7rem; font-weight:500; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; transition:all .25s; }
 button:hover { border-color:var(--accent); color:var(--accent); }
@@ -475,6 +476,7 @@ body.pk-open { overflow:hidden; }
 .tip-a { display:flex; gap:8px; flex-wrap:wrap; } .tip.out { opacity:0; transform:translateY(-6px); transition:all .25s; }
 .hq { width:24px; height:24px; padding:0 !important; border-radius:50%; font-size:.7rem !important; letter-spacing:0 !important; color:var(--muted); vertical-align:middle; }
 @media (prefers-reduced-motion:reduce){ .sw-body, .tip { animation:none; } }
+@media (max-width:380px){ #modal .box > .row:last-child { gap:8px; flex-wrap:nowrap; } #modal .box > .row:last-child button { padding:11px 10px; letter-spacing:.08em; flex:1 1 auto; min-width:0; } .bid .row > label.f { flex-basis:100%; } }
 .boxes { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px; }
 .bx { display:flex; flex-direction:column; gap:2px; border:1px solid var(--border); padding:8px 10px; background:var(--input); } .bx span { font-size:.6rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); } .bx input { border:none; background:transparent; padding:4px 0; font-family:'Playfair Display',serif; font-size:1.1rem; }
 .bx:focus-within { border-color:var(--accent); }
@@ -784,6 +786,7 @@ function alerts(){
     if(a.type==='bank' && a.upiLimit && ntOn('upi') && upiUsed(a) >= a.upiLimit) out.push({ lv:'red', t:`${a.name}: UPI daily limit reached`, s:'No more UPI payments from this bank today – use a card or another bank.' });
     if(a.minBal && bal < a.minBal) out.push({ lv:'red', t:`${a.name} is below minimum balance`, s:`Balance ${inr(bal)} · minimum ${inr(a.minBal)}` });
   });
+  if(S.accounts.length && (!S.lastBackup || Date.now() - S.lastBackup > 30*864e5) && (!S.bkSnooze || Date.now() - S.bkSnooze > 7*864e5)) out.push({ lv:'blue', t:'Make a backup', s:S.lastBackup ? `Your last encrypted backup was ${Math.floor((Date.now() - S.lastBackup) / 864e5)} days ago.` : 'You have not made an encrypted backup yet. If the phone is lost or reset, a backup is the only way to get your data back.', act:`<button class="sm good" onclick="exportJSON()">Back up now</button> <button class="sm ghost" onclick="S.bkSnooze=Date.now();save();render()">Later</button>` });
   const stale = S.accounts.filter(a => !a.inactive && (a.type==='bank'||a.type==='cash') && (!a.checkedAt || Date.now()-a.checkedAt > 7*864e5));
   if(stale.length && S.accounts.length) out.push({ lv:'blue', t:'Time to update balances', s:'Compare with your bank / UPI apps so the tracker stays accurate: ' + stale.map(a => a.name).join(', '), act:`<button class="sm" onclick="V.tab='accounts';render()">Check</button>` });
   const dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
@@ -798,6 +801,7 @@ function alerts(){
       if(o.status==='result' && (!o.unblock || o.unblock <= t) && (!o.late || o.late <= t)) out.push({ lv:'blue', t:`IPO money: ${o.name}`, s:o.res && o.res.debit ? `${inr(o.res.debit)} should be debited today and the rest released. Did the bank do it?` : 'The blocked money should be released today. Did the bank do it?', act:`<button class="sm good" onclick="${E(`ipoSettleModal('${o.id}')`)}">Confirm</button>` });
       if(leftOf(o) > .5 && o.settled && now.getTime() - o.settled < 14*864e5) out.push({ lv:'', t:`IPO leftover: ${o.name}`, s:`${inr(leftOf(o))} of the money you brought in is free again.`, act:`<button class="sm" onclick="${E(`leftModal('${o.id}')`)}">Put it back</button>` });
       if(o.listing===t && ['allotted','pending','result'].includes(o.status) && now.getHours() < 16) out.push({ lv:'blue', t:`${o.name} lists today`, s:'Listing at 10:00. Check Groww to trade or keep.' });
+      if(o.status==='allotted' && !o.after && o.listing && (o.listing < t || (o.listing===t && now.getHours() >= 16))) out.push({ lv:'', t:`Sold or kept ${o.name}?`, s:'Tell the app what you did after listing – it works out your gain or loss and updates your holdings.', act:`<button class="sm good" onclick="${E(`ipoAfterModal('${o.id}')`)}">Sold or kept?</button>` });
     }); }
   S.accounts.filter(a => a.type==='invest' && a.raa && a.raa.cycle!=='off' && a.raa.next).forEach(a => { const r = a.raa, days = Math.round((new Date(r.next + 'T00:00:00') - new Date(ISO(now) + 'T00:00:00')) / 864e5), free = raaFree(a);
     if(days < 0 && free <= 0.004){ const step = r.cycle==='quarterly' ? 3 : 1; while(r.next < ISO(now)) r.next = addMonths(r.next, step); save(); return; }
@@ -941,13 +945,16 @@ V.swRows = []; V.swApps = []; let swC = 0;
 const swHave = () => new Set(S.accounts.map(a => a.name));
 const swAllApps = () => [...new Set([...APPS, ...(S.apps || []), ...S.methods.filter(m => m.app).map(m => m.app), ...V.swApps])];
 const swNum = (id, label, ph, val) => `<label class="f">${label}<input id="${id}" type="number" inputmode="decimal" placeholder="${ph || ''}" value="${val || ''}"></label>`;
-const swAppChk = (a, on) => `<label class="ck sw-ap"><input type="checkbox" class="e-app" value="${esc(a)}" ${on ? 'checked' : ''}><span>${mark(guessBrand(a), 18, a)} ${esc(a)}</span></label>`;
+const swAppChk = (a, on) => `<label class="ck sw-ap"><input type="checkbox" class="e-app" value="${esc(a)}" ${on ? 'checked' : ''}><span>${appMark(a, 18)} ${esc(a)}</span></label>`;
 const swLinked = (id, note) => `<div class="sw-sub">Linked UPI apps <span class="sub">${note || 'tick the apps that pay from this account'}</span></div><div class="sw-apps" data-for="${id}">${swAllApps().map(a => swAppChk(a)).join('')}</div><button class="sm" type="button" onclick="swCustomApp('${id}')">+ Add custom UPI app</button>`;
 const swRow = (id, title, sub, more, mk0) => `<div class="sw-it" data-e="${id}"><label class="ck sw-h"><input type="checkbox" class="e-on" id="${id}" onchange="swTick(this)"><span class="sw-tn">${mk0 || ''}<span><b class="t">${esc(title)}</b>${sub ? `<span class="sub">${sub}</span>` : ''}</span></span></label><div class="sw-more" hidden>${more}</div></div>`;
 const swCust = (id, k, ph, fields) => `<div class="sw-it cust" data-e="${id}" data-k="${k}"><input type="checkbox" class="e-on" id="${id}" checked hidden><div class="sw-ch"><label class="f">Name<input id="${id}_n" class="e-name" placeholder="${ph}" oninput="swNameSync()"></label><button type="button" class="sw-rm" onclick="swRowDel('${id}')" aria-label="Remove">×</button></div><div class="sw-more">${fields}</div></div>`;
 const swAdded = (items) => items.length ? `<div class="sw-have">${items.map(x => `<span class="chip g">✓ ${esc(x)}</span>`).join(' ')}</div>` : '';
 const swBankFields = (id, p) => `<div class="row">${swNum(id + '_b', 'Balance now (₹)', 'as your bank app shows')}</div><details class="sw-d"><summary>Limits (optional)</summary><div class="row">${swNum(id + '_m', 'Minimum balance (₹)', '0')}${swNum(id + '_u', 'UPI daily limit (₹)', '', p ? p.acct.upiLimit : '')}</div></details>${swLinked(id)}`;
-const swCreditFields = (id, p) => `<div class="row">${swNum(id + '_l', 'Credit limit (₹)')}${swNum(id + '_a', 'Available now (₹)')}</div><div class="row">${swNum(id + '_bd', 'Statement day of month', '', p ? p.acct.billDay : 15)}${swNum(id + '_dd', 'Payment due day', '', p ? p.acct.dueDay : 5)}</div>${p ? '' : `<label class="ck"><input type="checkbox" id="${id}_v"><span>Virtual card (no plastic)</span></label>`}${swLinked(id, 'credit cards work for shop QR payments only')}`;
+const swPerks = (id, credit) => `<details class="sw-d"><summary>Cashback${credit ? ', fee and benefits' : ''} (optional)</summary><div class="sub" style="margin:8px 0">Fill only what the card gives. You can change it later: Cards → the card → Edit${credit ? ', and Benefits' : ''}.</div>
+  <div class="row">${swNum(id + '_cp', 'Cashback %', 'e.g. 1.5')}${swNum(id + '_cx', 'Max ₹ per payment', 'no limit')}${swNum(id + '_cm', 'Max ₹ per month', 'no limit')}</div>
+  ${credit ? `${swNum(id + '_fee', 'Annual fee (₹ a year)', '0')}<label class="f">Benefits – one per line<textarea id="${id}_bn" rows="3" placeholder="e.g. 4 lounge visits a year&#10;1 movie ticket every month&#10;Rs 500 voucher every quarter"></textarea></label><div class="sub">Each line becomes a benefit you can tick off when you use it. “a year”, “every month” or “every quarter” sets how often it comes back; a number at the start sets how many times.</div>` : ''}</details>`;
+const swCreditFields = (id, p) => `<div class="row">${swNum(id + '_l', 'Credit limit (₹)')}${swNum(id + '_a', 'Available now (₹)')}</div><div class="row">${swNum(id + '_bd', 'Statement day of month', '', p ? p.acct.billDay : 15)}${swNum(id + '_dd', 'Payment due day', '', p ? p.acct.dueDay : 5)}</div>${p ? '' : `<label class="ck"><input type="checkbox" id="${id}_v"><span>Virtual card (no plastic)</span></label>`}${swPerks(id, true)}${swLinked(id, 'credit cards work for shop QR payments only')}`;
 const swBankOpts = () => {
   const o = [...S.accounts.filter(a => a.type==='bank' && !a.inactive).map(a => [`acc:${a.id}`, a.name])];
   document.querySelectorAll('.sw-box[data-s=bank] .sw-it').forEach(r => { const id = r.dataset.e, on = document.getElementById(id); if(!on || !on.checked) return;
@@ -955,7 +962,7 @@ const swBankOpts = () => {
   return o;
 };
 function swBankSync(){ const o = swBankOpts(); document.querySelectorAll('.e-bank').forEach(s => { const cur = s.value; s.innerHTML = `<option value="">Choose the bank…</option>` + o.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join(''); s.value = o.some(x => x[0]===cur) ? cur : ''; }); }
-const swDebitFields = id => `<label class="f">Bank it spends from<select class="e-bank" id="${id}_k"></select></label><label class="ck"><input type="checkbox" id="${id}_v"><span>Virtual card (no plastic)</span></label>`;
+const swDebitFields = id => `<label class="f">Bank it spends from<select class="e-bank" id="${id}_k"></select></label><label class="ck"><input type="checkbox" id="${id}_v"><span>Virtual card (no plastic)</span></label>${swPerks(id, false)}`;
 const swWalletFields = id => `<div class="row">${swNum(id + '_b', 'Balance now (₹)')}</div><label class="f">Inside which UPI app? (optional)<select class="e-in" id="${id}_i"><option value="">None – a separate app</option>${swAllApps().map(a => `<option>${esc(a)}</option>`).join('')}</select></label>`;
 const swCashFields = (id, nw) => `<div class="row">${swNum(id + '_b', 'Cash now (₹)')}</div><label class="sw-sw"><input type="checkbox" id="${id}_nw" ${nw ? 'checked' : ''}><i></i><span>Include in my net worth</span></label>`;
 const swOtherFields = id => `<div class="row">${swNum(id + '_b', 'Balance now (₹)')}</div><label class="f">What is it?<select id="${id}_t"><option value="bank">Bank account</option><option value="wallet">Wallet</option><option value="cash">Cash</option><option value="invest">Investment platform</option></select></label>`;
@@ -1035,7 +1042,7 @@ function addHub(sec){
 /* first-run guide: what you type survives switching apps, refreshes and the browser closing the page */
 const DRAFT = 'moneyTrackerDraft';
 function saveDraft(){ if(!needsSetup() || !document.querySelector('.wz')) return; try{ const d = { v:2, vals:{}, rows:V.swRows.slice(), apps:V.swApps.slice(), open:(document.querySelector('.sw-box[open]') || {dataset:{}}).dataset.s || '', tab:document.getElementById('sw_ct_credit') && !document.getElementById('sw_ct_credit').hidden ? 'credit' : 'debit' };
-  document.querySelectorAll('.wz input[id^="w_"], .wz select[id^="w_"]').forEach(i => { d.vals[i.id] = i.type==='checkbox' ? i.checked : i.value; });
+  document.querySelectorAll('.wz input[id^="w_"], .wz select[id^="w_"], .wz textarea[id^="w_"]').forEach(i => { d.vals[i.id] = i.type==='checkbox' ? i.checked : i.value; });
   d.link = {}; document.querySelectorAll('.wz .sw-apps[data-for]').forEach(h => { const on = [...h.querySelectorAll('.e-app:checked')].map(x => x.value); if(on.length) d.link[h.dataset.for] = on; });
   d.sapps = [...document.querySelectorAll('.wz .s-app:checked')].map(x => x.value); localStorage.setItem(DRAFT, JSON.stringify(d)); }catch(e){} }
 function restoreDraft(){ try{ const d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); if(!d || d.v!==2 || !document.querySelector('.wz .sw-box')) return;
@@ -1070,14 +1077,18 @@ function swApply(wizard){
     S.accounts.push(a); out.n++; out.names.push(a.name); return a; };
   const addM = (a, m) => { const o = Object.assign({ id:uid(), accountId:a.id, inactive:!!a.inactive }, JSON.parse(JSON.stringify(m))); S.methods.push(o); return o; };
   const upiM = (p, a, app) => (p && (p.methods || []).find(m => m.kind==='upi' && m.app===app)) || { name:`${app} · ${a.name}`, kind:'upi', app, modes: a.type==='credit' ? ['qr'] : ['p2p','qr'] };
+  const perks = (id, a, card) => { const pct = num(id + '_cp'); if(pct > 0 && card) card.cb = { pct, txnCap:num(id + '_cx') || 0, monthCap:num(id + '_cm') || 0, modes:card.modes.slice() };
+    const fee = num(id + '_fee'); if(fee > 0) a.fee = fee;
+    (val(id + '_bn') || '').split(/\n+/).map(x => x.trim()).filter(Boolean).slice(0, 20).forEach(line => { const per = /month/i.test(line) ? 'monthly' : /quarter/i.test(line) ? 'quarterly' : /year|annual/i.test(line) ? 'yearly' : 'once', n = parseInt(line, 10);
+      benList().push({ id:uid(), ts:Date.now(), claims:[], accId:a.id, name:line.slice(0, 80), worth:0, times:n > 0 && n < 100 ? n : 1, period:per, until:'', note:'' }); }); };
   const linkApps = (id, a, p) => linked(id).forEach(app => { apps.add(app); addM(a, upiM(p, a, app)); });
   const noInact = p => { const o = Object.assign({}, p.acct); delete o.inactive; return o; };
   // banks
   PRESETS.filter(p => p.acct.type==='bank' && p.key!=='otherbank' && !have.has(p.acct.name)).forEach(p => { const id = 'w_' + p.key; if(!on(id)) return; const a = mk(noInact(p), num(id + '_b')); if(num(id + '_m') > 0) a.minBal = num(id + '_m'); a.upiLimit = +val(id + '_u') || 0; bankId['pre:' + p.key] = a.id; linkApps(id, a, p); });
   rows.filter(r => r.dataset.k==='bank').forEach(r => { const id = r.dataset.e, a = mk({ name:val(id + '_n').trim(), type:'bank', minBal:+val(id + '_m') || 0, upiLimit:+val(id + '_u') || 0, brand:'' }, num(id + '_b')); bankId['row:' + id] = a.id; linkApps(id, a, null); });
   // credit cards (with their linked apps)
-  PRESETS.filter(p => p.acct.type==='credit' && !have.has(p.acct.name)).forEach(p => { const id = 'w_' + p.key; if(!on(id)) return; const a = mk(Object.assign({}, p.acct, { billDay:+val(id + '_bd') || p.acct.billDay || 15, dueDay:+val(id + '_dd') || p.acct.dueDay || 5 }), num(id + '_a'), num(id + '_l')); (p.methods || []).filter(m => m.kind!=='upi').forEach(m => addM(a, m)); linkApps(id, a, p); });
-  rows.filter(r => r.dataset.k==='credit').forEach(r => { const id = r.dataset.e, nm = val(id + '_n').trim(), a = mk({ name:nm, type:'credit', billDay:+val(id + '_bd') || 15, dueDay:+val(id + '_dd') || 5, minDuePct:10, note:on(id + '_v') ? 'Virtual card' : '' }, num(id + '_a'), num(id + '_l')); addM(a, { name:nm, kind:'credit', modes:on(id + '_v') ? ['online'] : ['online', 'pos'] }); linkApps(id, a, null); });
+  PRESETS.filter(p => p.acct.type==='credit' && !have.has(p.acct.name)).forEach(p => { const id = 'w_' + p.key; if(!on(id)) return; const a = mk(Object.assign({}, p.acct, { billDay:+val(id + '_bd') || p.acct.billDay || 15, dueDay:+val(id + '_dd') || p.acct.dueDay || 5 }), num(id + '_a'), num(id + '_l')); const cms = (p.methods || []).filter(m => m.kind!=='upi').map(m => addM(a, m)); perks(id, a, cms[0]); linkApps(id, a, p); });
+  rows.filter(r => r.dataset.k==='credit').forEach(r => { const id = r.dataset.e, nm = val(id + '_n').trim(), a = mk({ name:nm, type:'credit', billDay:+val(id + '_bd') || 15, dueDay:+val(id + '_dd') || 5, minDuePct:10, note:on(id + '_v') ? 'Virtual card' : '' }, num(id + '_a'), num(id + '_l')); perks(id, a, addM(a, { name:nm, kind:'credit', modes:on(id + '_v') ? ['online'] : ['online', 'pos'] })); linkApps(id, a, null); });
   // debit cards
   const bankFor = v => { if(!v) return null; const [t, k] = [v.slice(0, v.indexOf(':')), v.slice(v.indexOf(':') + 1)]; return t==='acc' ? k : bankId[v]; };
   PRESETS.filter(p => p.acct.type==='bank' && p.key!=='otherbank').forEach(p => (p.methods || []).forEach((m, i) => { if(m.kind!=='debit') return; const id = `w_d_${p.key}_${i}`; if(!on(id)) return;
@@ -1085,10 +1096,10 @@ function swApply(wizard){
     const mm = addM(acc(bid), m), cbv = num(id + '_cb'); if(mm.cb && mm.cb.monthCap && cbv > 0) setPriorCb(mm.id, cbv);
     (p.reminders || []).forEach(r => { if(!S.reminders.some(x => x.accountId===bid && x.autoAmt)) S.reminders.push(Object.assign({ id:uid(), done:{}, accountId:bid }, r)); }); out.n++; out.names.push(m.name); }));
   for(const r of rows.filter(r => r.dataset.k==='debit')){ const id = r.dataset.e, bid = bankFor(val(id + '_k'));
-    addM(acc(bid), { name:val(id + '_n').trim() + (on(id + '_v') ? ' (virtual)' : ''), kind:'debit', modes:on(id + '_v') ? ['online'] : ['pos', 'online'] }); out.n++; out.names.push(val(id + '_n').trim()); }
+    perks(id, acc(bid), addM(acc(bid), { name:val(id + '_n').trim() + (on(id + '_v') ? ' (virtual)' : ''), kind:'debit', modes:on(id + '_v') ? ['online'] : ['pos', 'online'] })); out.n++; out.names.push(val(id + '_n').trim()); }
   // wallets
   PRESETS.filter(p => p.acct.type==='wallet' && !have.has(p.acct.name)).forEach(p => { const id = 'w_' + p.key; if(!on(id)) return; const a = mk(p.acct, num(id + '_b')); (p.methods || []).forEach(m => addM(a, m)); });
-  rows.filter(r => r.dataset.k==='wallet').forEach(r => { const id = r.dataset.e, nm = val(id + '_n').trim(), ia = val(id + '_i'), a = mk({ name:nm, type:'wallet', note:ia ? 'Inside ' + ia : '' }, num(id + '_b')); addM(a, { name:nm, kind:'wallet', modes:['qr', 'online'] }); if(ia) apps.add(ia); });
+  rows.filter(r => r.dataset.k==='wallet').forEach(r => { const id = r.dataset.e, nm = val(id + '_n').trim(), ia = val(id + '_i'), a = mk(Object.assign({ name:nm, type:'wallet', note:ia ? 'Inside ' + ia : '' }, ia ? { inApp:ia } : {}), num(id + '_b')); addM(a, { name:nm, kind:'wallet', modes:['qr', 'online'] }); if(ia) apps.add(ia); });
   // cash
   const seg = (k, l, nw0) => { const id = 'w_cash_' + k; if(!on(id)) return; const nm = k==='personal' && !S.accounts.some(a => a.name==='Cash') ? 'Cash' : 'Cash · ' + l, a = mk({ name:nm, type:'cash', brand:'cash', seg:k }, num(id + '_b')); if(!on(id + '_nw')) a.nw = false; addM(a, { name:nm, kind:'cash', modes:['p2p', 'pos'] }); };
   SW_SEGS.forEach(([k, l, nw]) => seg(k, l, nw));
@@ -1347,7 +1358,7 @@ function upiCard(){
   return `<div class="card"><h2>UPI apps <button class="sm pri" onclick="linkModal()">+ Link bank</button></h2>
     <div class="sub">Each UPI app can have several banks or cards linked. Tap a bank to edit it, or add another to an app.</div>
     <div class="list">${apps.map(app => { const ms = S.methods.filter(m => m.app===app);
-      return `<div class="item" style="flex-direction:column;align-items:stretch;gap:10px"><div style="display:flex;gap:12px;align-items:center">${mark(guessBrand(app),34,app)}<div class="t">${esc(app)}</div><span class="sub">${ms.length} linked</span></div>
+      return `<div class="item" style="flex-direction:column;align-items:stretch;gap:10px"><div style="display:flex;gap:12px;align-items:center">${appMark(app,34)}<div class="t">${esc(app)}</div><span class="sub">${ms.length} linked</span></div>
       <div class="row" style="gap:8px">${ms.map((m,i) => `<button class="sm ${m.inactive?'ghost':''}" onclick="methModal('${m.id}')">${esc(acc(m.accountId)?.name||'?')}${i===0?' · primary':''}${m.cb?.pct?' · '+m.cb.pct+'%':''}</button>`).join('')}<button class="sm" onclick="linkModal('${qs(app)}')">+ bank</button></div></div>`; }).join('') || '<div class="empty">Add your banks with Quick add, or link one here.</div>'}</div></div>`;
 }
 function linkModal(app){
@@ -1369,7 +1380,7 @@ function presetModal(){
   openModal('Quick add', `<div class="list">${PRESETS.map(p => `<div class="item"><div class="l"><div class="t">${esc(p.label)}</div></div><button class="sm pri" onclick="pickPreset('${p.key}')">Add</button></div>`).join('')}</div><button onclick="closeModal()">Close</button>`);
 }
 function pickPreset(k){ const p = PRESETS.find(x => x.key===k); const v = prompt(p.bal + ' (0 if unsure):', '0'); if(v===null) return; addPreset(p, parseFloat(v)); save(); closeModal(); render(); toast('Added'); }
-const logoFieldFor = a => a.type==='invest' ? logoField(a) : '';
+const logoFieldFor = a => logoField(a);
 function accModal(id){
   const a = id ? acc(id) : { type:'bank', opening:0, minBal:0, billDay:15, dueDay:5, minDuePct:10, limit:0 };
   V.accImg = undefined;
@@ -2141,8 +2152,16 @@ function rPeople(){
     <div class="stats"><div class="stat"><span class="sub">People owe you</span><b class="pos">${mi(owed)}</b></div><div class="stat"><span class="sub">You owe</span><b class="neg">${mi(owe)}</b></div></div>
     <div class="list">${names.map(n => { const es = S.people.filter(e => e.person===n && pplLive(e)).sort((a,b) => b.ts - a.ts), rp = S.fixed.find(f => f.ppl===n && fxLive(f));
       return `<details class="item" style="display:block"><summary style="display:flex;justify-content:space-between;align-items:center;list-style:none"><span class="t">${esc(n)}${rp ? ' <span class="chip g">monthly '+inr(rp.amount)+'</span>' : ''}</span><span class="${bal[n]>0?'pos':bal[n]<0?'neg':''}">${bal[n]>0 ? 'owes you ' + mi(bal[n]) : bal[n]<0 ? 'you owe ' + mi(-bal[n]) : 'settled'}</span></summary>
-      <div class="list" style="margin-top:10px">${es.map(e => `<div class="item"><div class="l"><div class="t">${PA[e.act][0]}</div><div class="sub">${fdt(e.ts)}${e.note?' · '+esc(e.note):''}</div></div><div class="r">${mi(Math.abs(e.amt))} <button class="sm ghost" onclick="delPpl('${e.id}')">×</button></div></div>`).join('')}<button class="sm" onclick="pplModal('${qs(n)}')">+ Add / settle with ${esc(n)}</button></div></details>`; }).join('') || '<div class="empty">Nobody owes anything.</div>'}</div></div>`;
+      <div class="list" style="margin-top:10px">${es.map(e => `<div class="item"><div class="l"><div class="t">${PA[e.act][0]}</div><div class="sub">${fdt(e.ts)}${e.note?' · '+esc(e.note):''}</div></div><div class="r">${mi(Math.abs(e.amt))} <button class="sm ghost" onclick="delPpl('${e.id}')">×</button></div></div>`).join('')}${(() => { const sum = k => es.filter(e => e.act===k).reduce((x, e) => x + Math.abs(e.amt), 0), bo = sum('borrowed'), ip = sum('iPaid'), le = sum('lent'), tp = sum('theyPaid');
+        return (bo ? `<div class="sub">Borrowed ${mi(bo)} · paid back ${mi(ip)} · <b>left to pay ${mi(Math.max(0, bo - ip))}</b></div>` : '') + (le ? `<div class="sub">Lent ${mi(le)} · got back ${mi(tp)} · <b>still to come ${mi(Math.max(0, le - tp))}</b></div>` : ''); })()}
+      <div class="row" style="gap:8px">${bal[n] < -0.004 ? `<button class="sm good" onclick="pplSettle('${qs(n)}','iPaid')">Pay back ${mi(-bal[n])}</button>` : bal[n] > 0.004 ? `<button class="sm good" onclick="pplSettle('${qs(n)}','theyPaid')">They paid back ${mi(bal[n])}</button>` : ''}<button class="sm" onclick="pplModal('${qs(n)}')">+ Add / settle with ${esc(n)}</button></div></div></details>`; }).join('') || '<div class="empty">Nobody owes anything.</div>'}</div></div>`;
 }
+/* where borrowed money went in (or lent money came from), spread over what is still owed */
+function pplSources(person, act){ const want = act==='iPaid' ? 'borrowed' : 'lent', by = {};
+  S.people.filter(e => e.person===person && e.act===want && pplLive(e) && e.txnId).forEach(e => { const t = S.txns.find(x => x.id===e.txnId); const a = t && (want==='borrowed' ? t.to : t.from); if(a && acc(a) && !acc(a).inactive) by[a] = (by[a] || 0) + Math.abs(e.amt); });
+  return by; }
+function pplSettle(person, act){ const bal = pplBal()[person] || 0, owed = Math.abs(bal); if(owed < .01) return toast('Nothing left to settle');
+  pplModal(person, { act, amt:owed, src:pplSources(person, act) }); }
 function pplModal(p){
   const as = S.accounts.filter(a => ['bank','cash','wallet'].includes(a.type) && !a.inactive), ms = S.methods.filter(m => !m.inactive && acc(m.accountId) && !acc(m.accountId).inactive);
   openModal('Lent / owed', `<label class="f">Person<input id="pp_n" data-free="1" value="${esc(p||'')}" list="pplist" placeholder="Name"></label><datalist id="pplist">${Object.keys(pplBal()).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
@@ -2159,6 +2178,11 @@ function pplModal(p){
     <label class="f">Note<input id="pp_note" placeholder="optional"></label>
     <div class="row"><button class="pri" onclick="savePpl()">Save</button><button onclick="closeModal()">Cancel</button></div>`);
   V.ppEdit = 0; ppRowAdd(true);
+  const pre = arguments[1]; if(pre){ $('pp_a').value = pre.act; $('pp_a').dispatchEvent(new Event('change', { bubbles:true })); $('pp_v').value = Math.round(pre.amt*100)/100;
+    const src = Object.entries(pre.src || {}), tot = src.reduce((x, [, v]) => x + v, 0);
+    if(src.length){ let left = pre.amt; src.forEach(([a, v], i) => { if(i) ppRowAdd(); const r = document.querySelectorAll('.pp_row')[i], part = i===src.length - 1 ? left : Math.round(pre.amt * v / tot * 100)/100; left = Math.round((left - part)*100)/100; r.querySelector('.pp_ra').value = a; r.querySelector('.pp_rv').value = part; });
+      V.ppEdit = 1; $('pp_rs').insertAdjacentHTML('beforebegin', `<div class="sub">Filled with the account${src.length > 1 ? 's' : ''} the money ${pre.act==='iPaid' ? 'came into' : 'went out of'} – change it if you like.</div>`); }
+    ppSync(); }
 }
 V.rmode = 'equal'; V.rvals = [];
 /* the accounts a lent / borrowed / paid-back amount moves in: one row, or several to split it */
@@ -2408,6 +2432,7 @@ function doMove(id, dir){
   const amt = parseFloat(mv('mv_a')), b = mv('mv_b'), a = acc(id); if(!(amt > 0) || !b) return toast('Enter the amount and pick a bank');
   const free = net(id) - holdTotal(id); if(dir==='out' && amt > free + .004) return toast(`Only ${inr(free)} is free to withdraw – the rest is on hold or already on the way`);
   const fee = $('mv_c') ? (parseFloat(mv('mv_c')) || 0) : 0; if(fee >= amt && fee > 0) return toast('Charges must be less than the amount');
+  if(dir==='out' && $('mv_m') && V.mvm==='inst' && !V.instOk) return ask('Instant withdrawal', `${inr(amt)} reaches ${esc(acc(b).name)} in about 5 minutes, but an instant withdrawal <b>cannot be cancelled</b> and may charge a small fee. Continue?`, 'Yes, withdraw', () => { V.instOk = 1; doMove(id, dir); V.instOk = 0; });
   if(dir==='out' && $('mv_m') && V.mvm!=='now'){ const x = mkTransit({ from:id, to:b, amount:amt, fee, mode:V.mvm, exp:etaFor(V.mvm) }); save(); closeModal(); haptic(12); scheduleNotifs(); render(); return toast(`On the way to ${acc(b).name} – expected ${fdt(x.exp)}`); }
   const tms = tsFrom(mv('mv_d')); S.txns.push({ id:uid(), ts:tms, type:'transfer', amount:amt, desc: dir==='out' ? `Withdrawn from ${a.name}` : `Added to ${a.name}`, cat:'Other', from: dir==='out' ? id : b, to: dir==='out' ? b : id });
   if(fee > 0) S.txns.push({ id:uid(), ts:tms + 1, type:'expense', amount:fee, desc:'Withdrawal charges', cat:'Other', from:b });
@@ -2422,7 +2447,7 @@ function addWork(d, n){ let x = new Date(d); for(let i = 0; i < Math.max(1, n); 
 const inMarket = t => { const d = new Date(t), m = d.getHours()*60 + d.getMinutes(); return workDay(d) && m >= 555 && m <= 930; };
 /* Groww standard withdrawal: processed the next working day, around 10–11 am. Instant: about 5 minutes */
 function etaFor(mode, t = Date.now(), days = 1){ if(mode==='inst') return t + 5*6e4; const x = addWork(new Date(t), mode==='std' ? 1 : days); x.setHours(11, 0, 0, 0); return x.getTime(); }
-const etaNote = (mode, t = Date.now()) => mode==='inst' ? 'Instant: about 5 minutes. It cannot be cancelled and may have a small fee.' : `Standard: processed the next working day, around 10–11 am → <b>${fdt(etaFor('std', t))}</b>.${inMarket(t) ? ' Asked during market hours, so it may also arrive sooner.' : ''} Weekends and market holidays are skipped.`;
+const etaNote = (mode, t = Date.now()) => mode==='inst' ? '<b>Instant</b>: about 5 minutes. <span class="neg">It cannot be cancelled</span> and may have a small fee.' : `Standard: processed the next working day, around 10–11 am → <b>${fdt(etaFor('std', t))}</b>.${inMarket(t) ? ' Asked during market hours, so it may also arrive sooner.' : ''} Weekends and market holidays are skipped.`;
 function holModal(){
   const m = holMap(), yrs = [...new Set(Object.keys(m).map(d => d.slice(0, 4)))].sort(), t = ISO(new Date());
   openModal('Market holidays', `<div class="sub">Used to work out when money arrives (withdrawals and sales settle on working days only). The app has no internet, so this list comes with each update. Add or remove days if your bank or the exchange changes them.</div>
@@ -2654,6 +2679,7 @@ function foSync(redraw){
 }
 function foSave(){
   foSync(); const o = (S.ipos || []).find(x => x.id===V.fo.id); if(!o) return; const rows = V.fo.rows.filter(r => r.s && +r.a > 0); if(!rows.length) return toast('Pick a source and an amount');
+  if(!V.instOk && rows.some(r => r.s.startsWith('wd') && r.m==='inst' && !r.d)) return ask('Instant withdrawal', 'An instant withdrawal arrives in about 5 minutes but <b>cannot be cancelled</b> and may charge a small fee. Continue?', 'Yes, continue', () => { V.instOk = 1; foSave(); V.instOk = 0; });
   for(const r of rows){ const a = +r.a, c = +r.c || 0; if(c >= a) return toast('Charges must be less than the amount');
     if(r.s==='lend' && !(r.p || '').trim()) return toast('Who is lending it?');
     const [k, x, h] = r.s.split(':'); if(k==='bank' || k==='wd'){ if(a > freeOf(x) + .004) return toast(`${acc(x).name} has only ${inr(freeOf(x))} free`); }
@@ -2804,12 +2830,50 @@ function ifSave(id){
   o.from = P.b; if(o.settleBank) o.settleBank = P.b;
   save(); closeModal(); haptic([8,30,12]); scheduleNotifs(); render(); toast(`${o.name}: now in ${acc(P.b).name}`);
 }
+/* after listing: did you keep the shares, sell all, or sell some? Works out the gain or loss */
+function ipoHolding(o){ const pl = acc(o.plat); return pl && (pl.holdings || []).find(h => h.ipoId===o.id); }
+function ipoAfterModal(id){
+  const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const h = ipoHolding(o), q0 = (h && h.qty) || (o.res && o.res.q) || 0, lot = +o.lot || 0;
+  V.ia = { id, k:'all', q0 };
+  openModal(`${esc(o.name)} – after listing`, `<div class="sub">${o.listing ? 'Listed on ' + fD(o.listing) + '. ' : ''}You got ${q0 ? `<b>${q0} shares</b>` : 'shares'} for <b>${inr(o.allotted || 0)}</b>${q0 ? ` (${inr((o.allotted || 0) / q0)} a share)` : ''}.${lot ? ` 1 lot = ${lot} shares.` : ''}</div>
+    ${q0 ? '' : `<label class="f">How many shares did you get?<input id="ia_q" type="number" inputmode="numeric" min="1" value="${lot || ''}" oninput="iaUI()"></label>`}
+    <div class="f">What did you do?<div class="seg" id="ia_k"><button type="button" onclick="iaKind('keep')">Kept them</button><button type="button" class="on" onclick="iaKind('all')">Sold all</button><button type="button" onclick="iaKind('some')">Sold some</button></div></div>
+    <div id="ia_sw"><label class="f">Shares sold<input id="ia_s" type="number" inputmode="numeric" min="1" oninput="iaUI()"></label><div class="row" id="ia_qb" style="gap:6px;margin-top:6px"></div></div>
+    <div class="row" id="ia_pw"><label class="f">Sell price per share (₹)<input id="ia_p" type="number" inputmode="decimal" oninput="iaUI()"></label><label class="f">Charges (₹)<input id="ia_c" type="number" inputmode="decimal" placeholder="0" oninput="iaUI()"></label></div>
+    <label class="f" id="ia_vw">Price per share now (optional – updates the value)<input id="ia_v" type="number" inputmode="decimal" oninput="iaUI()"></label>
+    <div class="card" id="ia_sum" style="padding:12px 14px;gap:4px"></div>
+    <div class="row"><button class="pri" onclick="iaSave('${id}')">Save</button><button class="ghost" onclick="closeModal()">Cancel</button></div>`);
+  iaKind('all');
+}
+function iaKind(k){ V.ia.k = k; document.querySelectorAll('#ia_k button').forEach((b, i) => b.classList.toggle('on', ['keep','all','some'][i]===k)); $('ia_sw').style.display = k==='some' ? '' : 'none'; $('ia_pw').style.display = k==='keep' ? 'none' : ''; $('ia_vw').style.display = k==='all' ? 'none' : ''; haptic(3); iaUI(); }
+function iaCalc(){ const o = (S.ipos || []).find(x => x.id===V.ia.id), q = V.ia.q0 || Math.max(0, parseInt(mv('ia_q')) || 0), k = V.ia.k, sold = k==='all' ? q : k==='some' ? Math.max(0, parseInt(mv('ia_s')) || 0) : 0;
+  const cost = q ? (o.allotted || 0) / q : 0, price = parseFloat(mv('ia_p')) || 0, fee = parseFloat(mv('ia_c')) || 0, now = parseFloat(mv('ia_v')) || 0, got = sold * price - fee, gain = got - sold * cost, left = q - sold;
+  return { o, q, k, sold, cost, price, fee, now, got, gain, left }; }
+function iaUI(){ const c = iaCalc(), lot = +c.o.lot || 0, qb = $('ia_qb');
+  if(qb) qb.innerHTML = lot && c.q > lot ? [...Array(Math.floor(c.q / lot)).keys()].map(i => (i + 1) * lot).filter(n => n < c.q).slice(0, 5).map(n => `<button type="button" class="sm ghost" onclick="$('ia_s').value=${n};iaUI()">${n / lot} lot${n / lot > 1 ? 's' : ''} (${n})</button>`).join('') : '';
+  const pct = c.sold && c.cost ? c.gain / (c.sold * c.cost) * 100 : 0, gl = v => `<b class="${v >= 0 ? 'pos' : 'neg'}">${v >= 0 ? 'gain ' : 'loss '}${inr(Math.abs(v))}</b>`;
+  $('ia_sum').innerHTML = !c.q ? '<div class="sub">Enter how many shares you got.</div>'
+    : c.k==='keep' ? `<div class="item" style="padding:3px 0"><span>Keeping ${c.q} shares</span><b>${inr(c.o.allotted || 0)} invested</b></div>${c.now ? `<div class="sub">Worth ${inr(c.q * c.now)} now – ${gl(c.q * (c.now - c.cost))} so far (not booked until you sell).</div>` : '<div class="sub">They stay in your holdings at what you paid. Add today’s price to see the value.</div>'}`
+    : `<div class="item" style="padding:3px 0"><span>Sold ${c.sold || 0} of ${c.q} shares${c.price ? ' at ' + inr(c.price) : ''}</span><b>${inr(Math.max(0, c.got))} received</b></div>
+      ${c.sold && c.price ? `<div class="sub">They cost ${inr(c.sold * c.cost)} → ${gl(c.gain)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)${c.fee ? ' after ' + inr(c.fee) + ' charges' : ''}.</div>` : ''}
+      ${c.k==='some' && c.left > 0 ? `<div class="sub">${c.left} shares stay in your holdings.</div>` : ''}${c.sold > c.q ? '<div class="sub neg">More than you have.</div>' : ''}
+      <div class="sub">The money goes to your ${esc(acc(c.o.plat)?.name || 'trading')} balance (usually the next working day). Withdraw it to your bank when you want.</div>`; }
+function iaSave(id){
+  const c = iaCalc(), o = c.o, h = ipoHolding(o), pl = acc(o.plat); if(!c.q) return toast('Enter how many shares you got');
+  if(c.k!=='keep'){ if(!(c.sold > 0) || c.sold > c.q) return toast(`Shares sold: 1 to ${c.q}`); if(!(c.price > 0)) return toast('Enter the sell price per share'); if(c.fee >= c.sold * c.price) return toast('Charges must be less than the sale'); }
+  if(c.k!=='keep' && pl) S.txns.push({ id:uid(), ts:Date.now(), type:'income', amount:Math.round(c.got*100)/100, desc:`Sold ${c.sold} ${o.name} shares (${c.gain >= 0 ? 'gain' : 'loss'} ${inr(Math.abs(c.gain))})`, cat:'Other', to:pl.id, ledger:true, ipoId:o.id });
+  if(h){ h.qty = c.left; if(c.left <= 0 && c.k!=='keep') pl.holdings = pl.holdings.filter(x => x!==h);
+    else { h.invested = Math.round(c.cost * c.left * 100)/100; h.value = Math.round((c.now || c.price || c.cost) * c.left * 100)/100; h.valueAt = ISO(new Date()); h.name = `${o.name} · ${c.left} shares (IPO)`; } }
+  o.after = { k:c.k, q:c.q, sold:c.sold, price:c.price, fee:c.fee, got:Math.round(c.got*100)/100, gain:Math.round(c.gain*100)/100, now:c.now, ts:Date.now() };
+  save(); closeModal(); haptic(c.gain >= 0 ? [10,40,10,40,20] : 14); scheduleNotifs(); render();
+  toast(c.k==='keep' ? `Keeping ${c.q} shares` : `Sold ${c.sold} – ${c.gain >= 0 ? 'gain' : 'loss'} ${inr(Math.abs(c.gain))}`);
+}
 function ipoDel(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o) return;
   ask('Remove this IPO?', o.status==='pending' || o.status==='result' ? 'The hold is removed and the money counts as free again. Money you already moved for it stays where it is.' : 'It is removed from the list. Shares already added stay in Holdings, and money you moved stays where it is.', 'Remove', () => { S.txns = S.txns.filter(t => !(t.id===o.txn && (o.status==='pending' || o.status==='result'))); S.ipos = S.ipos.filter(x => x.id!==id); save(); scheduleNotifs(); render(); }, true); }
 const IPST = { planned:['Planned', ''], pending:['On hold', 'w'], result:['Result in', 'w'], allotted:['Allotted', 'g'], not:['Not allotted', ''] };
 function ipoListHTML(){
-  const today = ISO(new Date()), L = (S.ipos || []).filter(o => !['allotted','not'].includes(o.status) || !o.listing || o.listing >= today || leftOf(o) > .5).slice().sort((a, b) => (a.open || a.applied || '').localeCompare(b.open || b.applied || ''));
-  const head = tip('ipo', 'Plan an IPO <b>before</b> bidding opens to see if you will have enough. <b>Apply</b> puts the money on hold. After the result, mark how many lots each bid got.') + `<div class="wh" style="margin-top:6px"><span class="eyebrow">IPOs ${hq('ipo')}</span><span><button class="sm ghost" onclick="holModal()">Holidays</button> <button class="sm ghost" onclick="transitModal()">+ On the way</button> <button class="sm" onclick="ipoModal()">+ IPO</button></span></div>`;
+  const today = ISO(new Date()), L = (S.ipos || []).filter(o => !['allotted','not'].includes(o.status) || !o.listing || o.listing >= today || leftOf(o) > .5 || (o.status==='allotted' && (!o.after || Date.now() - o.after.ts < 14*864e5))).slice().sort((a, b) => (a.open || a.applied || '').localeCompare(b.open || b.applied || ''));
+  const head = `<div class="wh" style="margin-top:6px"><span class="eyebrow">IPOs ${hq('ipo')}</span><span><button class="sm ghost" onclick="holModal()">Holidays</button> <button class="sm ghost" onclick="transitModal()">+ On the way</button> <button class="sm" onclick="ipoModal()">+ IPO</button></span></div>`;
   return trListHTML() + head + (L.length ? '' : '<div class="sub" style="padding:4px 2px 10px">Plan an IPO before bidding opens to see if you have enough, or apply to put the money on hold.</div>') + L.map(o => {
     const need = o.status==='pending' || o.status==='result' ? o.amount || ipoNeed(o) : ipoNeed(o), [sl, sc] = IPST[o.status] || ['', ''];
     const steps = [['Bidding opens', o.open || o.applied], ['Bidding closes', o.close], ['Allotment', o.allot], [o.status==='allotted' ? 'Funds debited' : o.status==='not' ? 'Funds released' : 'Funds unblock or debit', o.unblock], ['Listing', o.listing]];
@@ -2819,9 +2883,10 @@ function ipoListHTML(){
     const bids = o.bids ? `<div class="sub">Lot ${o.lot} · ₹${o.lo}–${o.hi} · ${o.bids.map((b, i) => `bid ${i + 1}: ${b.lots}×${o.lot} at ${b.cutoff ? 'cut-off' : '₹' + b.price}${b.cat!=='reg' ? ' (' + ICAT[b.cat][0].replace(/ \(.*\)/, '') + ')' : ''}${o.res && o.res.lots ? (o.res.lots[i] ? ' ✓' + o.res.lots[i] : ' ✗') : ''}`).join(' · ')}</div>` : '';
     const funds = (o.funds || []).length ? `<div class="sub">Brought in: ${o.funds.map(f => `${esc(f.k==='lend' ? f.person + ' (borrowed)' : acc(f.src)?.name || '?')} ${mi(f.amt)}${f.tid && !((S.transit || []).find(x => x.id===f.tid) || {}).done ? ' · on the way' : ''}`).join(', ')}</div>` : '';
     const B = (l, js, c = '') => `<button class="sm ${c}" onclick="${js}">${l}</button>`;
-    const acts = { planned: B('Apply now', `ipoApply('${o.id}')`, 'good') + (short > .004 ? B('Find the money', `fundModal('${o.id}')`) : ''), pending: B('Mark result', `ipoResultModal('${o.id}')`, 'good'), result: B('Confirm debit / release', `ipoSettleModal('${o.id}')`, 'good'), allotted:'', not:'' }[o.status] || '';
+    const acts = { planned: B('Apply now', `ipoApply('${o.id}')`, 'good') + (short > .004 ? B('Find the money', `fundModal('${o.id}')`) : ''), pending: B('Mark result', `ipoResultModal('${o.id}')`, 'good'), result: B('Confirm debit / release', `ipoSettleModal('${o.id}')`, 'good'), allotted: !o.after && (!o.listing || o.listing <= today) ? B('Sold or kept?', `ipoAfterModal('${o.id}')`, 'good') : o.after ? B('Change', `ipoAfterModal('${o.id}')`, 'ghost') : '', not:'' }[o.status] || '';
+    const aft = o.after ? `<div class="sub">${o.after.k==='keep' ? `Kept ${o.after.q} shares${o.after.now ? ' · worth ' + mi(o.after.q * o.after.now) + ' at ' + inr(o.after.now) : ''}` : `Sold ${o.after.sold} of ${o.after.q} at ${inr(o.after.price)} · <b class="${o.after.gain >= 0 ? 'pos' : 'neg'}">${o.after.gain >= 0 ? 'gain' : 'loss'} ${mi(Math.abs(o.after.gain))}</b>`}</div>` : '';
     return `<div class="ipo"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="t">${esc(o.name)}</div><div class="sub">${o.status==='planned' ? 'Will be blocked in' : 'Blocked in'} ${esc(acc(o.from)?.name || '?')}${o.plat ? ' · shares to ' + esc(acc(o.plat)?.name || '?') : ''}</div></div><span class="chip ${sc}">${sl} · ${amtTxt}</span></div>
-      ${bids}${funds}${short > .004 ? `<div class="sub neg">Short by ${mi(short)} by the closing day</div>` : ''}${acc(o.from) && acc(o.from).type==='invest' ? `<div class="sub neg">This entry says the money was blocked in the ${esc(acc(o.from).name)} balance. IPO money is blocked in your bank – tap <b>Change bank</b> to fix it.</div>` : ''}${o.status==='allotted' && !S.txns.some(t => t.type==='invest' && t.ipoId===o.id && !t.reverted) ? '<div class="sub neg">The debit for these shares is missing from your history – tap <b>Change bank</b> to record it again.</div>' : ''}
+      ${bids}${funds}${typeof aft==='string' ? aft : ''}${short > .004 ? `<div class="sub neg">Short by ${mi(short)} by the closing day</div>` : ''}${acc(o.from) && acc(o.from).type==='invest' ? `<div class="sub neg">This entry says the money was blocked in the ${esc(acc(o.from).name)} balance. IPO money is blocked in your bank – tap <b>Change bank</b> to fix it.</div>` : ''}${o.status==='allotted' && !S.txns.some(t => t.type==='invest' && t.ipoId===o.id && !t.reverted) ? '<div class="sub neg">The debit for these shares is missing from your history – tap <b>Change bank</b> to record it again.</div>' : ''}
       <div class="tl">${steps.map(([l, d], i) => `<div class="st ${i < cur ? 'done' : i===cur ? 'now' : ''}"><div class="dt">${i < cur ? '✓' : ''}</div><div><div class="nm2">${l}</div><div class="dd">${fD(d)}</div></div></div>`).join('')}</div>
       ${['planned','pending'].includes(o.status) ? scenHTML(o) : ''}
       <div class="row">${acts}${leftOf(o) > .5 ? B(`Leftover ${mi(leftOf(o))}`, `leftModal('${o.id}')`, 'pri') : ''}${['planned','pending'].includes(o.status) && o.bids ? B('Edit', `ipoModal('','${o.id}')`) : ''}${o.status==='pending' ? B('More money', `fundModal('${o.id}')`, 'ghost') : ''}${o.status!=='planned' ? B('Change bank', `ipoFromModal('${o.id}')`, acc(o.from) && acc(o.from).type==='invest' ? 'pri' : 'ghost') : ''}${B('Remove', `ipoDel('${o.id}')`, 'ghost')}</div></div>`; }).join('');
@@ -3005,7 +3070,7 @@ function snapNW(){ try{ if(!S || !S.accounts.length) return; const k = ISO(new D
 let snapT = 0; const queueSnap = () => { clearTimeout(snapT); snapT = setTimeout(snapNW, 1500); };
 
 /* ---------- wallet 2.0: tabs, bank / card / UPI / cashback / investment cards, gestures ---------- */
-const WTABS = [['all','All'],['banks','Banks'],['cards','Cards'],['upi','UPI'],['cashback','Cashback'],['benefits','Benefits'],['gifts','Gifts'],['invest','Invest']];
+const WTABS = [['all','All'],['banks','Banks'],['cards','Cards'],['upi','UPI'],['wallets','Wallets'],['cashback','Cashback'],['benefits','Benefits'],['gifts','Gifts'],['invest','Invest']];
 const palStyle = (brand, a) => { const pal = BR[brand], h = a ? hueOf(a) : 200; return pal && !(a && a.hue!=null) ? `--g1:${pal[0]};--g2:${pal[1]};` : `--g1:hsl(${h} 32% 24%);--g2:hsl(${(h+38)%360} 36% 9%);`; };
 const brandOfAcc = a => a.brand || guessBrand(a.name);
 const eyeBtn = (js, on) => `<button class="eye" onclick="event.stopPropagation();${js}" title="Show / hide">${eye(on)}</button>`;
@@ -3057,14 +3122,20 @@ function debitItem(m){
 }
 
 /* --- one card per UPI app --- */
+/* which UPI app a wallet lives in: saved when it was added, or worked out from its name or note */
+function walletApp(a){ if(a.inApp) return a.inApp; const n = ((a.note || '').replace(/^Inside (the )?/i, '') + ' ' + a.name).toLowerCase(), apps = [...new Set(APPS.concat(S.apps || [], S.methods.filter(m => m.app).map(m => m.app)))]; return apps.find(x => n.includes(x.toLowerCase())) || ''; }
+/* a UPI app's own logo if you added one, else its mark */
+const appMark = (app, size) => (S.appLogo || {})[app] ? `<img class="mk lg" src="${S.appLogo[app]}" width="${size}" height="${size}" alt="" style="border-radius:50%;object-fit:cover">` : mark(guessBrand(app), size, app);
+function appLogoModal(app){ openModal(`Logo for ${esc(app)}`, `<div class="sub">Shown on the ${esc(app)} card and lists. It stays on this phone.</div>${logoField({ name:app, logo:(S.appLogo || {})[app] })}<div class="row"><button class="pri" onclick="appLogoSave('${qs(app)}')">Save</button><button onclick="closeModal()">Cancel</button></div>`); }
+function appLogoSave(app){ S.appLogo = S.appLogo || {}; if(V.logoData===null) delete S.appLogo[app]; else if(V.logoData) S.appLogo[app] = V.logoData; V.logoData = undefined; save(); closeModal(); render(); toast('Logo saved'); }
 function upiItem(app){
-  const ms = S.methods.filter(m => m.app===app), br = guessBrand(app) || 'x';
+  const ms = S.methods.filter(m => m.app===app), br = guessBrand(app) || 'x', wl = S.accounts.filter(a => a.type==='wallet' && !a.inactive && walletApp(a)===app);
   const rows = ms.slice(0,4).map(m => { const a = acc(m.accountId); if(!a) return ''; const lim = a.type==='bank' && a.upiLimit;
     return `<div class="meta" style="opacity:1"><span style="display:flex;gap:8px;align-items:center">${mark(brandOfAcc(a),16,a.name)}${esc(a.name)}${m.inactive||a.inactive?' (off)':''}</span><span>${lim ? mi(upiUsed(a),a) + ' / ' + mi(a.upiLimit,a) : a.type==='credit' ? 'card' : ''}</span></div>`; }).join('');
   const rowsB = ms.map(m => { const a = acc(m.accountId); if(!a) return ''; return `<div class="bk"><div class="bt">${mark(brandOfAcc(a),16,a.name)} ${esc(a.name)}${m.cb?.pct ? ` <span class="chip g">${m.cb.pct}%</span>` : ''}</div>${bl('Works for', m.modes.map(x => MODES[x]).join(', '))}${a.type==='bank' && a.upiLimit ? bl('UPI today', mi(upiUsed(a),a) + ' / ' + mi(a.upiLimit,a)) : ''}${a.type==='credit' ? '<div class="sub" style="color:inherit;opacity:.8">Merchants only – disabled for personal accounts.</div>' : ''}</div>`; }).join('');
   return { key:'upi:'+app, html: cw('upi:'+app, { br, cls:'upi', style:palStyle(br),
-    front:`<div class="top"><div><div class="nm">${esc(app)}</div><div class="ty">UPI · ${ms.length} linked</div></div><div class="logo">${mark(br,34,app)}</div></div><div class="bot"><div class="ty">Linked banks · used today</div>${rows || '<div class="meta"><span>No bank linked yet – tap Link a bank</span></div>'}${ms.length > 4 ? `<div class="meta"><span>+ ${ms.length - 4} more</span></div>` : ''}</div>`,
-    back:backHead(app + ' · UPI', br, app) + `<div class="bkw">${rowsB}</div>` + backFoot(`<button class="sm" onclick="event.stopPropagation();linkModal('${qs(app)}')">Link a bank</button>`) }) };
+    front:`<div class="top"><div><div class="nm">${esc(app)}</div><div class="ty">UPI · ${ms.length} linked</div></div><div class="logo">${appMark(app,34)}</div></div><div class="bot"><div class="ty">Linked banks · used today</div>${rows || (wl.length ? '' : '<div class="meta"><span>No bank linked yet – tap Link a bank</span></div>')}${wl.map(a => `<div class="meta" style="opacity:1"><span>Wallet · ${esc(a.name)}</span><span>${mi(net(a.id), a)}</span></div>`).join('')}${ms.length > 4 ? `<div class="meta"><span>+ ${ms.length - 4} more</span></div>` : ''}</div>`,
+    back:backHead(app + ' · UPI', br, app) + `<div class="bkw">${rowsB}${wl.map(a => `<div class="bk"><div class="bt">Wallet · ${esc(a.name)}</div>${bl('Balance', mi(net(a.id), a))}</div>`).join('')}</div>` + backFoot(`<button class="sm" onclick="event.stopPropagation();linkModal('${qs(app)}')">Link a bank</button>`) }) };
 }
 
 /* --- cashback sources (updates by itself from your payments) --- */
@@ -3243,13 +3314,13 @@ function giftUse(id, kind){
 function giftUndo(id){ const g = giftList().find(x => x.id===id); if(!g) return; const live = giftLog(g); if(!live.length) return; const l = live[live.length - 1]; g.log = g.log.filter(x => x!==l); if(l.txn) S.txns = S.txns.filter(t => t.id!==l.txn); save(); render(); toast('Last entry undone'); }
 function walletItems(tab){
   const act = S.accounts.filter(a => a.type!=='external');
-  const banks = act.filter(a => ['bank','cash','wallet'].includes(a.type)).map(accItem).concat(act.filter(a => a.type==='paypal').map(ppItem));
+  const banks = act.filter(a => ['bank','cash'].includes(a.type)).map(accItem).concat(act.filter(a => a.type==='paypal').map(ppItem)), wallets = act.filter(a => a.type==='wallet').map(accItem);
   const credits = act.filter(a => a.type==='credit').map(accItem), debits = S.methods.filter(m => m.kind==='debit' && acc(m.accountId)).map(debitItem);
   const apps = [...new Set(S.methods.filter(m => m.app && m.kind==='upi').map(m => m.app).concat(S.apps || []))].map(upiItem);
   const cbs = cbMethods().map(cbItem), invs = act.filter(a => a.type==='invest').map(invItem);
   if(!invs.length) invs.push(platAddItem());
   const bens = act.filter(a => benList().some(b => b.accId===a.id)).map(benItem);
-  return { all:[...banks, ...credits, ...debits, ...apps, ...cbs], benefits:bens, gifts:giftList().map(giftItem), banks, cards:[...debits, ...credits], upi:apps, cashback:cbs, invest:invs }[tab] || [];
+  return { all:[...banks, ...wallets, ...credits, ...debits, ...apps, ...cbs], benefits:bens, gifts:giftList().map(giftItem), banks, wallets, cards:[...debits, ...credits], upi:apps, cashback:cbs, invest:invs }[tab] || [];
 }
 function actsFor(key){
   const [k, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)], B = (l, js) => `<button class="sm" onclick="${js}">${l}</button>`, q = qs(id);
@@ -3260,7 +3331,7 @@ function actsFor(key){
   if(k==='gift') return `<div class="acts">${B('Spent',`giftUseModal('${id}','spent')`)}${B('Move to bank',`giftUseModal('${id}','bank')`)}${B('Details',`flipKey('${key}')`)}${B('Edit',`giftModal('${id}')`)}</div>`;
   if(k==='ben') return `<div class="acts">${B('Add benefit',`benefitModal('','${id}')`)}${B('Year summary',`benYearModal()`)}${B('Details',`flipKey('${key}')`)}</div>`;
   if(k==='card') return `<div class="acts">${B('Pay',`payWithMethod('${id}')`)}${B('Limits',`flipKey('${key}')`)}${B('History',`histForMethod('${id}')`)}${B('Cashback',`setWTab('cashback')`)}${B('Benefits',`benefitModal('','${meth(id)?.accountId||''}')`)}${B('Edit',`methModal('${id}')`)}</div>`;
-  if(k==='upi') return `<div class="acts">${B('Pay',`payWithApp('${q}')`)}${B('Transactions',`histForApp('${q}')`)}${B('Balance',`upiBalances('${q}')`)}${B('Link bank',`linkModal('${q}')`)}</div>`;
+  if(k==='upi') return `<div class="acts">${B('Pay',`payWithApp('${q}')`)}${B('Transactions',`histForApp('${q}')`)}${B('Balance',`upiBalances('${q}')`)}${B('Link bank',`linkModal('${q}')`)}${B('Logo',`appLogoModal('${q}')`)}</div>`;
   if(k==='cb') return `<div class="acts">${meth(id)?.cb?.monthCap ? B('Earned so far',`priorCbModal('${id}')`) : ''}${B('Add reward',`rewardModal('${id}')`)}${B('Mark received',`claimCb(${Math.round(cbPending()*100)/100})`)}${B('History',`histForMethod('${id}')`)}${B('Edit rule',`methModal('${id}')`)}</div>`;
   if(k==='add') return `<div class="acts">${B('Add platform','platformModal()')}</div>`;
   if(k==='inv') return `<div class="acts">${B('Withdraw',`moveModal('${id}','out')`)}${B('Add money',`moveModal('${id}','in')`)}${acc(id)?.reserve ? '' : B('IPO',`ipoModal()`)}${acc(id)?.reserve ? '' : B('Auto-refund',`raaModal('${id}')`)}${B('Holdings',`holdingsModal('${id}')`)}${(acc(id)?.holdings || []).length ? B('Sell / redeem',`redeemModal('${id}')`) : ''}${B('Add holding',`holdingModal('${id}')`)}${B('Details',`flipKey('${key}')`)}</div>`;
@@ -3271,7 +3342,7 @@ function walletHTML(){
   if(!S.accounts.length) return '';
   const tab = V.wtab || 'all';
   const tabs = `<div class="wtabs">${WTABS.map(([k,l]) => `<button class="${tab===k?'on':''}" onclick="setWTab('${k}')">${l}</button>`).join('')}</div>`;
-  const add = { all:'addHub()', banks:"addHub('bank')", cards:"addHub('card')", upi:"addHub('upi')", cashback:`rewardModal()`, benefits:`benefitModal()`, gifts:`giftModal()`, invest:"addHub('invest')" }[tab];
+  const add = { all:'addHub()', banks:"addHub('bank')", cards:"addHub('card')", upi:"addHub('upi')", wallets:"addHub('wallet')", cashback:`rewardModal()`, benefits:`benefitModal()`, gifts:`giftModal()`, invest:"addHub('invest')" }[tab];
   const head = `<div class="wh"><span class="eyebrow">Wallet ${hq('wallet')}</span><span><button class="sm ghost" onclick="toggleStack()">${V.stack ? 'Carousel' : 'Stack'}</button> <button class="sm" onclick="${add}">+ Add</button></span></div>${tabs}`;
   if(tab==='invest' && !V.invOk) return `<div class="wallet">${head}<div class="card" style="align-items:center;text-align:center;gap:12px"><div class="logo" style="color:var(--accent)">${mark('invest',46)}</div><div class="t">Investments are private</div><div class="sub">They are never part of your total balance. Enter your PIN to open them – fingerprint is not accepted here.</div><button class="pri" onclick="setWTab('invest')">Enter PIN</button></div></div>`;
   const items = walletItems(tab);
@@ -3284,7 +3355,7 @@ function walletHTML(){
   if(tab==='banks' && !S.accounts.some(a => a.type==='paypal')) top = `<div class="card" style="padding:12px 18px;flex-direction:row;align-items:center;justify-content:space-between"><div class="sub">Have a PayPal account? Link it here (no payments tracked).</div><button class="sm" onclick="ppModal()">Add PayPal</button></div>`;
   if(tab==='invest'){ const inv = S.accounts.filter(a => a.type==='invest' && !a.reserve), now = new Date(), v = inv.reduce((x,a) => x + invValue(a,now), 0), i0 = inv.reduce((x,a) => x + invInvested(a,now), 0);
     top = `<div class="stats"><div class="stat"><span class="sub">Invested</span><b>${mi(i0)}</b></div><div class="stat"><span class="sub">Value now</span><b>${mi(v)}</b></div><div class="stat"><span class="sub">Gain</span><b class="${v-i0>=0?'pos':'neg'}">${mi(v-i0)}</b></div></div><div class="row"><button class="sm" onclick="openNetWorth()">Net worth</button><button class="sm" onclick="go('plan');V.pt='calc';render()">FD & RD calculator</button><button class="sm pri" onclick="ipoModal()">Apply for IPO</button></div>`; }
-  const WT = { banks:'Each card is a bank account. Tap a card to flip it; <b>Pay</b>, <b>History</b> and <b>Balance</b> are under it. Tap <b>Balance</b> whenever your bank app shows something different.', cards:'Debit and credit cards. Flip a card to see today\'s limits. A credit card shows what is left of its limit and when the bill is due.', upi:'UPI apps are not banks. Each app card shows which banks it is linked to; <b>Link a bank</b> adds another.', cashback:'Cashback is counted by itself from the payments you record. Tap <b>Mark received</b> when it reaches your bank.', benefits:'Note any perk your cards give – a voucher, OTT, lounge, spa – and tick it off when you use it. You are reminded before it runs out.', gifts:'Gift cards and vouchers you were given. Record what you spend, or move the rest to your bank.', invest:'Investments are private. <b>Add holding</b> puts an FD, RD, gold or shares inside a platform; <b>IPO</b> opens the IPO planner below.' };
+  const WT = { banks:'Each card is a bank account. Tap a card to flip it; <b>Pay</b>, <b>History</b> and <b>Balance</b> are under it. Tap <b>Balance</b> whenever your bank app shows something different.', cards:'Debit and credit cards. Flip a card to see today\'s limits. A credit card shows what is left of its limit and when the bill is due.', upi:'UPI apps are not banks. Each app card shows which banks it is linked to, and any wallet inside the app; <b>Link a bank</b> adds another.', wallets:'Money kept inside an app – a PhonePe, Paytm or Amazon Pay wallet, or a separate one like Mobikwik. Each has its own card; tap <b>Balance</b> when the app shows something different.', cashback:'Cashback is counted by itself from the payments you record. Tap <b>Mark received</b> when it reaches your bank.', benefits:'Note any perk your cards give – a voucher, OTT, lounge, spa – and tick it off when you use it. You are reminded before it runs out.', gifts:'Gift cards and vouchers you were given. Record what you spend, or move the rest to your bank.', invest:'Investments are private. <b>Add holding</b> puts an FD, RD, gold or shares inside a platform. Below, plan an IPO <b>before</b> bidding opens to see if you will have enough – <b>Apply</b> puts the money on hold.' };
   top = (WT[tab] ? tip('tab_' + tab, WT[tab]) : '') + top;
   const body = V.stack
     ? `<div class="pull" onclick="toggleStack(false)"><i></i></div><div class="pullhint"></div><div class="stackv">${items.map(i => `<div class="sw ${i.key===V.focus?'sel':''}">${i.html}</div>${i.key===V.focus ? `<div id="wacts">${actsFor(i.key)}</div>` : ''}`).join('')}</div>`
@@ -3471,7 +3542,7 @@ function initVideo(){
 
 /* ---------- Android app: notifications, back button ---------- */
 const hashId = k => { let h = 7; for(const c of k) h = (h*31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 2000000000 + 1; };
-const NOTIF_TYPES = [['upi','UPI daily limit reached'],['minbal','Bank balance below its minimum'],['cards','Credit card bills'],['reminders','My monthly reminders'],['fixed','Autopay, EMI and payments due'],['ipo','IPO: bidding opens and closes, allotment, debit / unblock, listing day, and follow-ups'],['transit','Money on the way (withdrawals, sales) – when it should arrive'],['refund','Groww auto-refund dates'],['maturity','FD / RD maturity'],['cashback','Unused cashback cap near month end'],['benefit','Card benefits about to expire, and your year in benefits'],['gift','Gift cards about to expire'],['events','Upcoming costs and events'],['balance','Monthly balance check (1st of the month)'],['weekly','Weekly money check (Sunday evening)']];
+const NOTIF_TYPES = [['upi','UPI daily limit reached'],['minbal','Bank balance below its minimum'],['cards','Credit card bills'],['reminders','My monthly reminders'],['fixed','Autopay, EMI and payments due'],['ipo','IPO: bidding opens and closes, allotment, debit / unblock, listing day, and follow-ups'],['transit','Money on the way (withdrawals, sales) – when it should arrive'],['backup','Make a backup (once a month, only when it is due)'],['refund','Groww auto-refund dates'],['maturity','FD / RD maturity'],['cashback','Unused cashback cap near month end'],['benefit','Card benefits about to expire, and your year in benefits'],['gift','Gift cards about to expire'],['events','Upcoming costs and events'],['balance','Monthly balance check (1st of the month)'],['weekly','Weekly money check (Sunday evening)']];
 NOTIF_TYPES.push(NOTIF_TYPES.shift(), NOTIF_TYPES.shift());
 const nHour = () => S.nHour ?? 9, cardLead = () => S.cardLead ?? 3, ntOn = k => k==='weekly' ? (S.nt || {}).weekly === true : (S.nt || {})[k] !== false;
 function setNt(k, v){ S.nt = S.nt || {}; S.nt[k] = v; save(); scheduleNotifs(); }
@@ -3496,7 +3567,9 @@ function notifEvents(days = 45){
       if(o.unblock){ if(o.unblock!==o.allot) at(D(o.unblock), 10, `IPO funds debit / unblock today: ${o.name}`, 'Mark the result, then confirm what the bank did.', `iu${o.id}`);
         at(D(nx(o.unblock)), 'N', `IPO: did you confirm ${o.name}?`, 'Open the app and mark the result so your balance is right.', `if${o.id}`); } }
     if(o.status==='result'){ const d0 = o.late || o.unblock || ISO(t0); at(D(d0), 10, `IPO money: ${o.name}`, 'Debit or release should be done today. Confirm it in the app.', `ir${o.id}${d0}`); at(D(nx(d0)), 10, `Still waiting on ${o.name}?`, 'Debit or release can be a day late. Check your bank app and confirm.', `iq${o.id}${d0}`); }
-    if(o.listing && ['pending','result','allotted'].includes(o.status)) [7, 8, 9].forEach(h => at(D(o.listing), h, `${o.name} lists today`, 'Listing at 10:00. Check Groww to trade or keep.', `il${h}${o.id}`)); });
+    if(o.listing && ['pending','result','allotted'].includes(o.status)) [7, 8, 9].forEach(h => at(D(o.listing), h, `${o.name} lists today`, 'Listing at 10:00. Check Groww to trade or keep.', `il${h}${o.id}`));
+    if(o.listing && o.status==='allotted' && !o.after) at(D(o.listing), 16, `Sold or kept ${o.name}?`, 'Record it in the app – it works out your gain or loss.', `ia${o.id}`); });
+  if(ntOn('backup') && S.accounts.length) for(let m = 1; m <= 3; m++){ const d = new Date(t0.getFullYear(), t0.getMonth() + m, 1); if(d - (S.lastBackup || 0) > 21*DAY) at(d, 'N', 'Time for a backup', 'Make an encrypted backup in Settings so nothing is lost if you change or reset your phone.', 'bk' + ISO(d)); }
   if(ntOn('transit')) trList().forEach(x => { const e = new Date(x.exp), f = nextWork(e); f.setHours(10, 0, 0, 0);
     [[e, 'Money should be in your bank now'], [f, 'Not marked yet – it can be a day late. Check your bank app.']].forEach(([d, b], i) => { if(d > now && d <= lim) out.push({ at:d, title:`Money on the way: ${trName(x)}`, body:b, key:`tr${i}${x.id}${x.exp}`, act:'TRANSIT', extra:{ tid:x.id } }); }); });
   if(ntOn('refund')) S.accounts.filter(a => a.type==='invest' && a.raa && a.raa.cycle!=='off' && a.raa.next).forEach(a => { const d = new Date(a.raa.next + 'T00:00:00');
@@ -3527,7 +3600,7 @@ async function triggerAlerts(){
 function rNotifs(){
   const ev = notifEvents(), byDay = {}; ev.forEach(e => { const k = ISO(e.at); (byDay[k] = byDay[k] || []).push(e); });
   const hr = h => h < 12 ? h + ':00 am' : h===12 ? '12:00 pm' : (h - 12) + ':00 pm', tm = d => d.toLocaleTimeString('en-IN', { hour:'numeric', minute:'2-digit', hour12:true });
-  const info = { cards:'Before each credit-card due date', reminders:'Before each of your monthly reminders', fixed:'Before the due date of autopay, EMI and fixed payments', ipo:'Before the IPO allotment day. Also: bidding opens (9 am) and closes, debit / unblock day, a next-day nudge when allotment or the debit is late, and listing day at 7, 8 and 9 am', transit:'At the expected time, with an Arrived button, and again the next working day if you have not marked it', refund:'Before the Groww auto-refund date', maturity:'Before an FD / RD matures', events:'Before each upcoming cost or event, using the days you chose for that item', gift:'Before a gift card with a valid-till date expires, only while it still has balance', benefit:'Before an unclaimed benefit runs out (end of its month, quarter or year, or its valid-till date). On 28 December you also get your year in benefits', cashback:'Days before the month ends, only for cards whose cashback cap is not used up', balance:'A reminder to compare your bank apps with TrackMe', weekly:'A quiet nudge once a week to tick off pending items and glance at what is coming up. No amounts', upi:'Sent right after you record a payment that reaches the limit. The app only knows what you record', minbal:'Sent right after you record a payment that leaves a bank or wallet below its minimum balance' };
+  const info = { cards:'Before each credit-card due date', reminders:'Before each of your monthly reminders', fixed:'Before the due date of autopay, EMI and fixed payments', ipo:'Before the IPO allotment day. Also: bidding opens (9 am) and closes, debit / unblock day, a next-day nudge when allotment or the debit is late, and listing day at 7, 8 and 9 am', transit:'At the expected time, with an Arrived button, and again the next working day if you have not marked it', backup:'On the 1st of the month, only if your last encrypted backup is more than 3 weeks old', refund:'Before the Groww auto-refund date', maturity:'Before an FD / RD matures', events:'Before each upcoming cost or event, using the days you chose for that item', gift:'Before a gift card with a valid-till date expires, only while it still has balance', benefit:'Before an unclaimed benefit runs out (end of its month, quarter or year, or its valid-till date). On 28 December you also get your year in benefits', cashback:'Days before the month ends, only for cards whose cashback cap is not used up', balance:'A reminder to compare your bank apps with TrackMe', weekly:'A quiet nudge once a week to tick off pending items and glance at what is coming up. No amounts', upi:'Sent right after you record a payment that reaches the limit. The app only knows what you record', minbal:'Sent right after you record a payment that leaves a bank or wallet below its minimum balance' };
   const chips = k => `<div class="row" style="gap:6px;margin:4px 0 2px 34px">${NLEAD.map(d => `<button class="sm ${leadOf(k).includes(d) ? 'pri' : ''}" onclick="toggleLead('${k}',${d})">${d===0 ? 'On the day' : d + 'd before'}</button>`).join('')}<span class="sub" style="align-self:center">${leadOf(k).length} reminder${leadOf(k).length>1?'s':''} each time</span></div>`;
   const sel = (k, key, opts, cur, fmt) => `<select onchange="setNc('${k}','${key}',+this.value)">${opts.map(o => `<option value="${o}" ${o===cur?'selected':''}>${fmt(o)}</option>`).join('')}</select>`;
   const extra = k => !ntOn(k) ? '' : NDEF[k] ? chips(k)
@@ -3842,9 +3915,12 @@ function dvBackHTML(key, kind){
   if(!S.dv) return `<div class="bk">${bl(title, 'Set up in Security')}</div>`;
   if(!V.dv) return `<div class="bk">${bl(title, `<button class="sm" onclick="event.stopPropagation();dvShowBack('${qs(key)}')">Unlock</button>`)}</div>`;
   const rec = V.dv.data.a[key] || {};
-  if(kind==='card') return `<div class="bk">${rec.last4 || rec.exp || rec.net ? bl(rec.last4 ? '•••• ' + esc(rec.last4) : title, esc([rec.exp ? 'Exp ' + rec.exp : '', rec.net || ''].filter(Boolean).join(' · '))) : bl(title, 'Not saved yet')}</div>`;
-  return `<div class="bk">${rec.last4 || rec.ifsc ? bl(rec.last4 ? 'A/c •••• ' + esc(rec.last4) : title, esc(rec.ifsc || '')) : bl(title, 'Not saved yet')}${rec.branch ? bl('Branch', esc(rec.branch)) : ''}</div>`;
+  const cp = f => rec[f] ? ` <button class="sm" style="padding:2px 8px;min-height:0" onclick="event.stopPropagation();dvCopyField('${qs(key)}','${f}')" aria-label="Copy">Copy</button>` : '';
+  if(kind==='card') return `<div class="bk">${rec.last4 || rec.exp || rec.net ? bl((rec.last4 ? '•••• ' + esc(rec.last4) : title) + cp('last4'), esc([rec.exp ? 'Exp ' + rec.exp : '', rec.net || ''].filter(Boolean).join(' · '))) : bl(title, 'Not saved yet')}</div>`;
+  return `<div class="bk">${rec.last4 || rec.ifsc ? bl(rec.last4 ? 'A/c •••• ' + esc(rec.last4) : title, esc(rec.ifsc || '') + cp(rec.ifsc ? 'ifsc' : 'last4')) : bl(title, 'Not saved yet')}${rec.branch ? bl('Branch', esc(rec.branch)) : ''}</div>`;
 }
+function dvCopyField(key, f){ if(!V.dv) return toast('Unlock the details first'); const t = (V.dv.data.a[key] || {})[f]; if(!t) return; V.dvAt = Date.now();
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { toast('Copied – cleared in 30 seconds'); haptic(5); setTimeout(() => { try{ navigator.clipboard.writeText(''); }catch(e){} }, 30000); }, () => toast('Could not copy')); }
 function dvShowBack(key){ dvEnsure(() => { refreshWallet(); setTimeout(() => { const w = cwEl(key.startsWith('m:') ? 'card:' + key.slice(2) : 'acc:' + key.slice(2)); if(w) w.classList.add('flip'); }, 40); }); }
 const NETS = ['', 'Visa', 'Mastercard', 'RuPay', 'Amex', 'Other'];
 function dvRows(rec, kind){
@@ -3920,7 +3996,7 @@ function exportJSON(){
 async function doBackup(){
   const useDv = !!($('bk_dv') && $('bk_dv').checked), a = useDv ? V.dv.pass : (mv('bk_a') || ''), b = useDv ? a : (mv('bk_b') || '');
   if(a.length < 8) return toast('Use at least 8 characters'); if(a !== b) return toast('The two do not match');
-  const fin = async () => { download('money-backup-' + new Date().toISOString().slice(0, 10) + '-locked.json', await makeBackup(a), 'application/json'); toast('Locked backup ready'); };
+  const fin = async () => { download('money-backup-' + new Date().toISOString().slice(0, 10) + '-locked.json', await makeBackup(a), 'application/json'); toast('Locked backup ready'); S.lastBackup = Date.now(); save(); };
   if(!S.rk && $('bk_rk') && $('bk_rk').checked){ const code = await rkSetup(); V.rkDone = fin; return openModal('Your recovery key', `<div class="sub">Write this on paper and keep it at home – <b>not</b> as a photo in the cloud. It is shown only once. With it, a backup can be opened if you forget the password.</div><div class="serif" style="font-size:1.25rem;letter-spacing:.06em;text-align:center;padding:14px 0;word-break:break-all">${rkShow(code)}</div><label class="ck"><input type="checkbox" id="rk_ok" onchange="$('rk_go').disabled=!this.checked"><span>I wrote it down</span></label><button class="pri" id="rk_go" disabled onclick="closeModal();rkDone()">Continue</button>`); }
   closeModal(); fin();
 }
