@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a0f0b" id="metaTheme">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -363,7 +363,7 @@ details.item summary::-webkit-details-marker { display:none; }
 .stackv { display:flex; flex-direction:column; padding:8px 0 24px; }
 .sw { margin-bottom:-120px; position:relative; }
 .sw .cw { width:min(100%,380px); margin:0 auto; flex:none; transform:none !important; opacity:1 !important; }
-.sw.sel { margin-bottom:14px; }
+.sw.sel { margin-bottom:14px; } .stackv > .sw:last-child { margin-bottom:0; }
 .sw .cc { box-shadow:0 -10px 26px -14px rgba(0,0,0,.9), 0 24px 40px -22px rgba(0,0,0,.8); }
 .acts { display:grid; grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); gap:8px; margin:4px 0 8px; }
 /* ---- pay-with carousel on the Add screen ---- */
@@ -421,6 +421,60 @@ main > * { animation:rise .55s cubic-bezier(.2,.8,.2,1) both; } main > *:nth-chi
 #modal .box > .row:last-child { position:sticky; bottom:0; background:var(--solid); padding:14px 24px calc(14px + env(safe-area-inset-bottom)); margin:0; border-top:1px solid var(--border); z-index:2; }
 #modal .box > :nth-last-child(2) { margin-bottom:6px; } #modal .box > *:not(h2):not(.row:last-child):first-of-type { margin-top:0; }
 #modal .box { overflow-y:auto; }
+html { touch-action:pan-x pan-y; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+.pk-native { position:absolute !important; width:1px !important; height:1px !important; opacity:0 !important; pointer-events:none !important; overflow:hidden; padding:0 !important; border:0 !important; }
+button.pk { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; flex:1; text-align:left; text-transform:none; letter-spacing:0; font-size:1rem; font-weight:300; padding:12px 10px; min-height:46px; background:var(--input); border:none; border-bottom:1px solid var(--border); border-radius:2px 2px 0 0; color:var(--text); }
+button.pk:hover { border-color:var(--border); color:var(--text); } button.pk:focus-visible { border-bottom-color:var(--accent); outline:none; background:rgba(255,255,255,.06); }
+button.pk .pkv { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } button.pk.ph .pkv { color:var(--muted); } button.pk .pka { flex:none; opacity:.6; transition:transform .2s; } button.pk:active .pka { transform:translateY(2px); } button.pk:disabled { opacity:.5; }
+.pk-bg { position:fixed; inset:0; z-index:170; background:rgba(0,0,0,.55); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); display:flex; align-items:flex-end; justify-content:center; opacity:0; visibility:hidden; transition:opacity .2s ease, visibility 0s linear .22s; }
+.pk-bg.on { opacity:1; visibility:visible; transition:opacity .2s ease; }
+.pk-sheet { background:var(--solid); border:1px solid var(--border); border-bottom:none; width:100%; max-width:560px; max-height:72vh; border-radius:14px 14px 0 0; display:flex; flex-direction:column; transform:translateY(40px); transition:transform .24s cubic-bezier(.2,.8,.2,1); padding-bottom:env(safe-area-inset-bottom); }
+.pk-bg.on .pk-sheet { transform:none; }
+.pk-h { display:flex; justify-content:space-between; align-items:center; padding:16px 20px 10px; font-family:'Playfair Display',serif; font-size:1.15rem; } .pk-h b { font-weight:500; }
+.pk-x { border:none !important; padding:2px 8px !important; font-size:1.3rem !important; color:var(--muted) !important; letter-spacing:0 !important; }
+.pk-sw { padding:0 20px 8px; } .pk-sw input { font-size:1rem; }
+.pk-l { overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:0 10px 14px; }
+.pk-g { font-size:.6rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); padding:12px 12px 4px; }
+button.pk-o { display:flex; width:100%; justify-content:space-between; align-items:center; gap:10px; text-align:left; text-transform:none; letter-spacing:0; font-size:1rem; font-weight:300; padding:13px 12px; min-height:48px; border:none; border-radius:6px; color:var(--text); background:transparent; }
+button.pk-o:hover { background:rgba(255,255,255,.04); color:var(--text); } button.pk-o:active { background:rgba(255,255,255,.08); } button.pk-o.sel { color:var(--accent); background:var(--good-bg); } button.pk-o:disabled { opacity:.4; }
+.pk-e { padding:22px; text-align:center; color:var(--muted); font-style:italic; }
+@media (min-width:700px){ .pk-bg{ align-items:center; } .pk-sheet{ border-radius:10px; border-bottom:1px solid var(--border); } }
+@media (prefers-reduced-motion:reduce){ .pk-bg, .pk-sheet, button.pk .pka { transition:none; } }
+body.pk-open { overflow:hidden; }
+
+/* ---- add flow: boxed steps ---- */
+.sw-guide { border:1px dashed var(--border); border-radius:8px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; }
+.sw-boxes { display:flex; flex-direction:column; gap:12px; margin-top:4px; }
+.sw-box { border:1px solid var(--border); border-radius:10px; background:var(--card); scroll-margin-top:72px; overflow:hidden; transition:border-color .25s, box-shadow .25s; }
+.sw-box[open] { border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); box-shadow:0 10px 30px -18px var(--shadow); }
+.sw-box > summary { list-style:none; display:flex; align-items:center; gap:12px; padding:14px 14px; cursor:pointer; text-transform:none; letter-spacing:0; font-size:1rem; }
+.sw-box > summary::-webkit-details-marker { display:none; }
+.sw-num { width:28px; height:28px; border-radius:50%; border:1.5px solid var(--muted); display:flex; align-items:center; justify-content:center; font-size:.8rem; flex:none; transition:all .25s; }
+.sw-box.done .sw-num { background:var(--accent); border-color:var(--accent); color:var(--accent-text); }
+.sw-tt { flex:1; font-family:'Playfair Display',serif; font-size:1.1rem; } .sw-chip { margin:0; }
+.sw-q { width:28px; height:28px; padding:0 !important; border-radius:50%; font-size:.8rem !important; letter-spacing:0 !important; color:var(--muted); flex:none; }
+.sw-body { padding:0 14px 16px; display:flex; flex-direction:column; gap:12px; animation:swin .26s cubic-bezier(.2,.8,.2,1); }
+@keyframes swin { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+.sw-helpt { background:var(--info-bg); border-radius:8px; padding:10px 12px; font-size:.85rem; line-height:1.5; }
+.sw-have { display:flex; flex-wrap:wrap; gap:6px; }
+.sw-it { border:1px solid var(--border); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:10px; margin-bottom:10px; transition:border-color .2s, background .2s; }
+.sw-it:has(> .sw-h .e-on:checked), .sw-it.cust { border-color:color-mix(in srgb,var(--accent) 40%,var(--border)); background:rgba(255,255,255,.02); }
+.sw-h { align-items:center; } .sw-tn { display:flex; align-items:center; gap:10px; } .sw-tn > span { display:flex; flex-direction:column; }
+.sw-it > input.e-on[hidden] { display:none !important; }
+.sw-more { display:flex; flex-direction:column; gap:12px; } .sw-more[hidden] { display:none; }
+.sw-ch { display:flex; gap:10px; align-items:flex-end; } .sw-rm { border:none !important; font-size:1.3rem !important; padding:6px 10px !important; color:var(--muted); letter-spacing:0 !important; }
+.sw-sub { font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.sw-apps, .sw-apps2 { display:flex; flex-wrap:wrap; gap:6px 14px; } .sw-ap span { display:inline-flex; align-items:center; gap:6px; }
+.sw-d summary { font-size:.62rem; color:var(--muted); } .sw-ca { align-items:center; flex-wrap:nowrap; gap:8px; }
+.sw-tabs button { padding:11px 4px; }
+.sw-sw { display:flex; align-items:center; gap:12px; cursor:pointer; } .sw-sw input { position:absolute; opacity:0; width:1px; height:1px; }
+.sw-sw i { width:44px; height:26px; border-radius:13px; background:var(--border); position:relative; flex:none; transition:background .25s; }
+.sw-sw i::after { content:''; position:absolute; left:3px; top:3px; width:20px; height:20px; border-radius:50%; background:var(--muted); transition:transform .25s cubic-bezier(.2,.8,.2,1), background .25s; }
+.sw-sw input:checked + i { background:var(--accent); } .sw-sw input:checked + i::after { transform:translateX(18px); background:var(--accent-text); } .sw-sw input:focus-visible + i { outline:2px solid var(--accent); outline-offset:2px; }
+.tip { border:1px solid color-mix(in srgb,var(--info) 40%,var(--border)); background:var(--info-bg); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:10px; font-size:.88rem; line-height:1.5; animation:swin .3s ease both; }
+.tip-a { display:flex; gap:8px; flex-wrap:wrap; } .tip.out { opacity:0; transform:translateY(-6px); transition:all .25s; }
+.hq { width:24px; height:24px; padding:0 !important; border-radius:50%; font-size:.7rem !important; letter-spacing:0 !important; color:var(--muted); vertical-align:middle; }
+@media (prefers-reduced-motion:reduce){ .sw-body, .tip { animation:none; } }
 .boxes { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px; }
 .bx { display:flex; flex-direction:column; gap:2px; border:1px solid var(--border); padding:8px 10px; background:var(--input); } .bx span { font-size:.6rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); } .bx input { border:none; background:transparent; padding:4px 0; font-family:'Playfair Display',serif; font-size:1.1rem; }
 .bx:focus-within { border-color:var(--accent); }
@@ -822,7 +876,7 @@ const welcomeBanner = () => (V.welcomeHide || (S.welcomeUntil && S.welcomeUntil 
 function rHome(){ return welcomeBanner() + intrBanner() + rHome0(); }
 function rHome0(){
   if(needsSetup()) return rWelcome();
-  const real = S.accounts.filter(a => a.type!=='external' && a.type!=='invest' && !a.inactive);
+  const real = S.accounts.filter(a => a.type!=='external' && a.type!=='invest' && !a.inactive && a.nw!==false);
   const split = moneySplit();
   const money = real.filter(a => a.type!=='credit').reduce((s,a) => s+net(a.id), 0);
   const used = real.filter(a => a.type==='credit').reduce((s,a) => s - net(a.id), 0);
@@ -871,38 +925,186 @@ function accRows(list){
   }).join('') || '<div class="empty">No accounts.</div>';
 }
 const needsSetup = () => !S.accounts.some(a => a.type!=='invest' && a.type!=='external');
-function rWelcome(){
-  const have = new Set(S.accounts.map(a => a.name));
-  const groups = [['Banks – and the UPI apps that use them',['sbi','hdfc','icici','axis','kotak','pnb','bob','canara','union','idfc','indusind','yes','federal','otherbank']],['Credit cards',['cc_hdfc','cc_sbi','cc_icici','cc_axis','cc_other']],['Cash and wallets',['cash','w_phonepe','w_paytm','w_amazon']],['Investments (kept private, never in your total)',['groww','zerodha','upstox','paytmmoney','indmoney','kuvera','stable']]];
-  const row = p => { if(have.has(p.acct.name)) return '';
-    const cr = p.acct.type==='credit', apps = [...new Set((p.methods||[]).filter(m => m.kind==='upi').map(m => m.app))];
-    const on = p.key==='cash' ? 'checked' : '';
-    return `<div class="item" style="flex-direction:column;align-items:stretch;gap:8px"><label class="ck"><input type="checkbox" id="w_${p.key}" ${on}><span class="t" style="display:flex;align-items:center;gap:10px">${mark(p.acct.brand||guessBrand(p.acct.name),28,p.acct.name)}${esc(p.acct.name)}</span></label>
-      ${p.key==='stable' ? `<div class="sub">Optional: type your FDs and RDs exactly as your bank or app shows them. Interest, current value and maturity are then calculated for you. Leave blank to skip; add or change them later under Invest.</div>
-        <div class="eyebrow">Fixed deposit (FD)</div><label class="f">Name<input id="w_fd_n" placeholder="e.g. Bank FD"></label>
-        <div class="row"><label class="f">Amount invested (₹)<input id="w_fd_p" type="number" inputmode="decimal"></label><label class="f">Interest rate (% a year)<input id="w_fd_r" type="number" inputmode="decimal" step="0.01"></label></div>
-        <div class="row"><label class="f">Term (months)<input id="w_fd_m" type="number" inputmode="numeric" placeholder="2y 6m = 30"></label><label class="f">Start date<input id="w_fd_s" type="date"></label></div>
-        <div class="eyebrow">Recurring deposit (RD)</div><label class="f">Name<input id="w_rd_n" placeholder="e.g. Monthly RD"></label>
-        <div class="row"><label class="f">Monthly amount (₹)<input id="w_rd_m" type="number" inputmode="decimal"></label><label class="f">Interest rate (% a year)<input id="w_rd_r" type="number" inputmode="decimal" step="0.01"></label></div>
-        <div class="row"><label class="f">Term (months)<input id="w_rd_t" type="number" inputmode="numeric" placeholder="5 years = 60"></label><label class="f">First deposit date<input id="w_rd_s" type="date"></label></div>
-        <div class="sub">Not started yet? Leave the date empty and tap “Start today” under Invest when you begin. Amounts differ month to month? List them below.</div>
-        <label class="f">Different amounts by month (optional)<input id="w_rd_a" placeholder="e.g. 2000, 2000, 3500"></label>` : `<div class="row">${cr ? `<label class="f">Credit limit (₹)<input id="w_l_${p.key}" type="number" inputmode="decimal"></label>` : ''}<label class="f">${cr ? 'Available now (₹)' : p.key==='groww' ? 'Groww balance – cash, not stocks (₹)' : p.acct.type==='invest' ? 'Current value (₹)' : 'Balance now (₹)'}<input id="w_b_${p.key}" type="number" inputmode="decimal" placeholder="what your app shows"></label></div>`}
-      ${apps.length ? `<div class="sub">UPI apps linked to it:</div><div class="row" style="gap:14px">${apps.map(x => `<label class="ck"><input type="checkbox" id="w_a_${p.key}_${esc(x)}" checked><span style="display:inline-flex;align-items:center;gap:6px">${mark(guessBrand(x),18,x)}${esc(x)}</span></label>`).join('')}</div>` : ''}</div>`; };
-  return `<div class="card wz"><div class="script" style="font-size:2.4rem;color:var(--accent)">Let's set up</div>
-    <div class="sub">Private to this phone – nothing is uploaded. Tick what you use and type the balance your bank app shows <b>right now</b>. From here the tracker keeps count of every rupee.</div>
-    <div class="sub"><b>PhonePe, BHIM, GPay and Navi are apps, not banks.</b> Enter the balance of the bank behind them. A wallet inside an app, like PhonePe Wallet, is listed separately.</div>
-    <label class="f">Your name<input id="w_name" value="${esc(S.userName)}" placeholder="e.g. Asha"></label>
-    ${groups.map(([t, keys]) => { const rows = keys.map(k => PRESETS.find(p => p.key===k)).filter(Boolean).map(row).join(''); return rows ? `<div class="eyebrow" style="margin-top:6px">${t}</div><div class="list">${rows}</div>` : ''; }).join('')}
-    <button class="pri" onclick="applyWelcome()">Create my tracker</button>
-    <div class="sub">Missing something? Skip it now and add any bank or card later in Cards.</div>
-    <div class="sub">Already used TrackMe on the website or another phone? Restore that backup instead – everything comes back.</div><button onclick="$('imp0').click()">Restore a backup</button> <button onclick="pasteRestoreModal()">Paste backup text</button></div>`;
+/* ================= ADD FLOW: seven boxed steps – the same in the first-run guide and inside the app ================= */
+const SW = [
+  ['upi', 'UPI apps', 'Tick the UPI apps you use on this phone.', 'PhonePe, GPay, BHIM and similar are <b>apps</b>, not banks. Tick the ones you have. In step 2 you tell the tracker which bank each app pays from. An app you add here gets its own card, even before a bank is linked.'],
+  ['bank', 'Bank accounts', 'Tick each bank and type the balance your bank app shows right now.', 'Type the balance <b>as your bank app shows it today</b> – from then on the tracker keeps count. After you tick a bank you can also tick which UPI apps are linked to it. Never enter account numbers, PINs or passwords.'],
+  ['card', 'Cards', 'Debit and credit cards – virtual cards too.', 'A <b>debit card</b> spends from a bank account, so pick the bank. A <b>credit card</b> has its own limit, a statement day and a due day. Virtual cards (no plastic) go in the same lists: just tick “Virtual card”. Cashback and benefit rules for a card can be set later: Cards → the card → Edit.'],
+  ['wallet', 'Wallets', 'Money kept inside an app, like a PhonePe or Paytm wallet.', 'Some wallets live inside a UPI app, some are separate apps (like Mobikwik). Type the wallet balance. Gift cards go under “Others”.'],
+  ['cash', 'Cash', 'Cash you hold – in separate boxes if you like.', 'Make a box for each place you keep cash: Personal, Office, Family or your own. Only boxes with <b>Include in my net worth</b> on are counted in your total. Office or family cash is shown separately on the net worth page.'],
+  ['invest', 'Investments', 'Groww, FD, RD and other investment apps. Private – never in your total balance.', 'Type the cash balance in the platform (for Groww: the cash, not the stocks). Add FDs, RDs, gold or shares afterwards with <b>Add holding</b> on the platform card. They are always kept private behind your PIN.'],
+  ['other', 'Others', 'PayPal, gift cards, or anything that does not fit above.', 'Use this for anything else you want to track. Gift cards and PayPal have their own small forms.']
+];
+const SW_TIE = { w_phonepe:'Inside the PhonePe app', w_paytm:'Inside the Paytm app', w_amazon:'Inside the Amazon app', w_mobikwik:'Separate app' };
+const SW_SEGS = [['personal', 'Personal', true], ['office', 'Office', false], ['family', 'Family', false]];
+V.swRows = []; V.swApps = []; let swC = 0;
+const swHave = () => new Set(S.accounts.map(a => a.name));
+const swAllApps = () => [...new Set([...APPS, ...(S.apps || []), ...S.methods.filter(m => m.app).map(m => m.app), ...V.swApps])];
+const swNum = (id, label, ph, val) => `<label class="f">${label}<input id="${id}" type="number" inputmode="decimal" placeholder="${ph || ''}" value="${val || ''}"></label>`;
+const swAppChk = (a, on) => `<label class="ck sw-ap"><input type="checkbox" class="e-app" value="${esc(a)}" ${on ? 'checked' : ''}><span>${mark(guessBrand(a), 18, a)} ${esc(a)}</span></label>`;
+const swLinked = (id, note) => `<div class="sw-sub">Linked UPI apps <span class="sub">${note || 'tick the apps that pay from this account'}</span></div><div class="sw-apps" data-for="${id}">${swAllApps().map(a => swAppChk(a)).join('')}</div><button class="sm" type="button" onclick="swCustomApp('${id}')">+ Add custom UPI app</button>`;
+const swRow = (id, title, sub, more, mk0) => `<div class="sw-it" data-e="${id}"><label class="ck sw-h"><input type="checkbox" class="e-on" id="${id}" onchange="swTick(this)"><span class="sw-tn">${mk0 || ''}<span><b class="t">${esc(title)}</b>${sub ? `<span class="sub">${sub}</span>` : ''}</span></span></label><div class="sw-more" hidden>${more}</div></div>`;
+const swCust = (id, k, ph, fields) => `<div class="sw-it cust" data-e="${id}" data-k="${k}"><input type="checkbox" class="e-on" id="${id}" checked hidden><div class="sw-ch"><label class="f">Name<input id="${id}_n" class="e-name" placeholder="${ph}" oninput="swNameSync()"></label><button type="button" class="sw-rm" onclick="swRowDel('${id}')" aria-label="Remove">×</button></div><div class="sw-more">${fields}</div></div>`;
+const swAdded = (items) => items.length ? `<div class="sw-have">${items.map(x => `<span class="chip g">✓ ${esc(x)}</span>`).join(' ')}</div>` : '';
+const swBankFields = (id, p) => `<div class="row">${swNum(id + '_b', 'Balance now (₹)', 'as your bank app shows')}</div><details class="sw-d"><summary>Limits (optional)</summary><div class="row">${swNum(id + '_m', 'Minimum balance (₹)', '0')}${swNum(id + '_u', 'UPI daily limit (₹)', '', p ? p.acct.upiLimit : '')}</div></details>${swLinked(id)}`;
+const swCreditFields = (id, p) => `<div class="row">${swNum(id + '_l', 'Credit limit (₹)')}${swNum(id + '_a', 'Available now (₹)')}</div><div class="row">${swNum(id + '_bd', 'Statement day of month', '', p ? p.acct.billDay : 15)}${swNum(id + '_dd', 'Payment due day', '', p ? p.acct.dueDay : 5)}</div>${p ? '' : `<label class="ck"><input type="checkbox" id="${id}_v"><span>Virtual card (no plastic)</span></label>`}${swLinked(id, 'credit cards work for shop QR payments only')}`;
+const swBankOpts = () => {
+  const o = [...S.accounts.filter(a => a.type==='bank' && !a.inactive).map(a => [`acc:${a.id}`, a.name])];
+  document.querySelectorAll('.sw-box[data-s=bank] .sw-it').forEach(r => { const id = r.dataset.e, on = document.getElementById(id); if(!on || !on.checked) return;
+    if(r.classList.contains('cust')){ const n = (document.getElementById(id + '_n') || {}).value; if(n && n.trim()) o.push([`row:${id}`, n.trim()]); } else { const p = PRESETS.find(x => 'w_' + x.key===id); if(p) o.push([`pre:${p.key}`, p.acct.name + ' (new)']); } });
+  return o;
+};
+function swBankSync(){ const o = swBankOpts(); document.querySelectorAll('.e-bank').forEach(s => { const cur = s.value; s.innerHTML = `<option value="">Choose the bank…</option>` + o.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join(''); s.value = o.some(x => x[0]===cur) ? cur : ''; }); }
+const swDebitFields = id => `<label class="f">Bank it spends from<select class="e-bank" id="${id}_k"></select></label><label class="ck"><input type="checkbox" id="${id}_v"><span>Virtual card (no plastic)</span></label>`;
+const swWalletFields = id => `<div class="row">${swNum(id + '_b', 'Balance now (₹)')}</div><label class="f">Inside which UPI app? (optional)<select class="e-in" id="${id}_i"><option value="">None – a separate app</option>${swAllApps().map(a => `<option>${esc(a)}</option>`).join('')}</select></label>`;
+const swCashFields = (id, nw) => `<div class="row">${swNum(id + '_b', 'Cash now (₹)')}</div><label class="sw-sw"><input type="checkbox" id="${id}_nw" ${nw ? 'checked' : ''}><i></i><span>Include in my net worth</span></label>`;
+const swOtherFields = id => `<div class="row">${swNum(id + '_b', 'Balance now (₹)')}</div><label class="f">What is it?<select id="${id}_t"><option value="bank">Bank account</option><option value="wallet">Wallet</option><option value="cash">Cash</option><option value="invest">Investment platform</option></select></label>`;
+const swRowKinds = { bank:['Bank name', 'e.g. My bank', id => swBankFields(id)], debit:['Card name', 'e.g. Bank Platinum Debit', swDebitFields], credit:['Card name', 'e.g. My credit card', id => swCreditFields(id)], wallet:['Wallet name', 'e.g. Mobikwik', swWalletFields], cash:['Cash box name', 'e.g. Travel cash', id => swCashFields(id, false)], invest:['Platform name', 'e.g. Zerodha', id => `<div class="row">${swNum(id + '_b', 'Balance now (₹)')}</div>`], other:['Name', 'e.g. Savings jar', swOtherFields] };
+function swAddRow(k, n, quiet){
+  const c = document.getElementById('sw_rows_' + k); if(!c) return; n = n || ++swC; swC = Math.max(swC, n); const id = 'w_c' + n, d = swRowKinds[k];
+  c.insertAdjacentHTML('beforeend', swCust(id, k, d[1], d[2](id))); V.swRows.push({ k, n });
+  if(k==='bank' || k==='debit') swBankSync(); swCount(); if(!quiet){ saveDraft(); const nm = document.getElementById(id + '_n'); if(nm) nm.scrollIntoView({ block:'center', behavior:'smooth' }); }
 }
-function applyWelcome(){
-  S.userName = mv('w_name').trim() || S.userName;
-  PRESETS.forEach(p => { if(!$('w_'+p.key)?.checked) return;
-    const a = addPreset(p, parseFloat(mv('w_b_'+p.key)), parseFloat(mv('w_l_'+p.key))); if(p.key==='stable') seedStable(a);
-    S.methods = S.methods.filter(m => !(m.accountId===a.id && m.kind==='upi' && m.app && $('w_a_'+p.key+'_'+m.app) && !$('w_a_'+p.key+'_'+m.app).checked)); });
-  clearDraft(); save(); V.tab = 'home'; render(); balanceCheckModal();
+function swRowDel(id){ const r = document.querySelector(`.sw-it[data-e="${id}"]`); if(!r) return; const k = r.dataset.k; r.remove(); V.swRows = V.swRows.filter(x => 'w_c' + x.n !== id); if(k==='bank') swBankSync(); swCount(); saveDraft(); }
+function swNameSync(){ swBankSync(); saveDraft(); }
+function swTick(cb){ const it = cb.closest('.sw-it'), m = it && it.querySelector(':scope > .sw-more'); if(m){ m.hidden = !cb.checked; if(cb.checked) haptic(3); } if(it && it.dataset.e && /^w_/.test(it.dataset.e) && it.closest('.sw-box[data-s=bank]')) swBankSync(); swCount(); saveDraft(); }
+function swCustomApp(forId){
+  const host = forId ? document.querySelector(`.sw-apps[data-for="${forId}"]`) : document.getElementById('sw_app_list'); if(!host) return;
+  if(host.parentNode.querySelector('.sw-ca')) return host.parentNode.querySelector('.sw-ca input').focus();
+  const row = document.createElement('div'); row.className = 'row sw-ca'; row.innerHTML = `<input placeholder="App name, e.g. Slice" maxlength="24" style="flex:1"><button type="button" class="sm pri">Add</button><button type="button" class="sm ghost">Cancel</button>`; host.after(row);
+  const inp = row.querySelector('input'), b = row.querySelectorAll('button'); inp.focus();
+  const add = () => { const n = inp.value.trim(); if(!n) return toast('Type the app name'); swAddApp(n, forId); row.remove(); };
+  b[0].onclick = add; b[1].onclick = () => row.remove(); inp.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); add(); } });
+}
+function swAddApp(n, forId){
+  if(!swAllApps().some(x => x.toLowerCase()===n.toLowerCase())) V.swApps.push(n); else n = swAllApps().find(x => x.toLowerCase()===n.toLowerCase());
+  document.querySelectorAll('.sw-apps').forEach(h => { if(!h.querySelector(`.e-app[value="${CSS.escape(n)}"]`)) h.insertAdjacentHTML('beforeend', swAppChk(n)); });
+  document.querySelectorAll('.e-in').forEach(s => { if(![...s.options].some(o => o.value===n)) s.add(new Option(n)); });
+  const l = document.getElementById('sw_app_list'); if(l && !l.querySelector(`.s-app[value="${CSS.escape(n)}"]`)) l.insertAdjacentHTML('beforeend', `<label class="ck sw-ap"><input type="checkbox" class="s-app e-on" value="${esc(n)}" onchange="swCount();saveDraft()" checked><span>${mark(guessBrand(n), 18, n)} ${esc(n)}</span></label>`);
+  if(forId){ const c = document.querySelector(`.sw-apps[data-for="${forId}"] .e-app[value="${CSS.escape(n)}"]`); if(c) c.checked = true; }
+  swCount(); saveDraft(); toast(n + ' added');
+}
+function swCount(){
+  document.querySelectorAll('.sw-box').forEach(b => { const k = b.dataset.s, n = b.querySelectorAll('.sw-it .e-on:checked, .s-app:checked').length, have = +b.dataset.have || 0, chip = b.querySelector('.sw-chip');
+    chip.textContent = n ? `${n} to add` : have ? `${have} added` : 'optional'; chip.className = 'sw-chip chip ' + (n ? 'w' : have ? 'g' : ''); b.classList.toggle('done', !!(n || have)); });
+}
+function swSet(k, quiet){ const d = document.querySelector(`.sw-box[data-s="${k}"]`); if(!d) return; document.querySelectorAll('.sw-box').forEach(x => { x.open = x===d; }); if(!quiet){ setTimeout(() => d.scrollIntoView({ block:'start', behavior:'smooth' }), 60); saveDraft(); } }
+function swSum(e, k){ e.preventDefault(); const d = e.currentTarget.parentNode; if(d.open){ d.open = false; saveDraft(); } else { haptic(3); swSet(k); } }
+const swOpen = swSet;
+function swNext(k){ const i = SW.findIndex(s => s[0]===k), cur = document.querySelector(`.sw-box[data-s="${k}"]`), nx = document.querySelector(`.sw-box[data-s="${(SW[i + 1] || [])[0]}"]`); haptic(5);
+  if(nx){ swSet(nx.dataset.s); } else { cur.open = false; const b = document.getElementById('sw_go'); if(b) setTimeout(() => b.scrollIntoView({ block:'center', behavior:'smooth' }), 60); } }
+function swHelp(e, k){ e.preventDefault(); e.stopPropagation(); const h = document.getElementById('sw_h_' + k); if(h) h.hidden = !h.hidden; }
+function swHTML(wizard, openKey){
+  const have = swHave(), segHave = new Set(S.accounts.filter(a => a.type==='cash').map(a => (a.seg || (/^cash$/i.test(a.name) ? 'personal' : String(a.name).replace(/^Cash · /i, '').toLowerCase()))));
+  const exApps = new Set([...(S.apps || []), ...S.methods.filter(m => m.app && m.kind==='upi').map(m => m.app)]);
+  const byT = t => S.accounts.filter(a => a.type===t).map(a => a.name);
+  const bankP = PRESETS.filter(p => p.acct.type==='bank' && p.key!=='otherbank'), creditP = PRESETS.filter(p => p.acct.type==='credit'), walletP = PRESETS.filter(p => p.acct.type==='wallet'), invP = PRESETS.filter(p => p.acct.type==='invest');
+  const mkA = p => mark(p.acct.brand || guessBrand(p.acct.name), 26, p.acct.name);
+  const debits = []; bankP.forEach(p => (p.methods || []).forEach((m, i) => { if(m.kind==='debit' && !S.methods.some(x => x.name===m.name)) debits.push([p, m, i]); }));
+  const stableBlock = p => p.key==='stable' ? `<div class="sub">Optional: type your FD and RD exactly as the app shows them. Interest, current value and maturity are then worked out for you. Leave blank to skip.</div>
+    <div class="eyebrow">Fixed deposit (FD)</div><label class="f">Name<input id="w_fd_n" placeholder="e.g. My FD"></label>
+    <div class="row"><label class="f">Amount invested (₹)<input id="w_fd_p" type="number" inputmode="decimal"></label><label class="f">Interest rate (% a year)<input id="w_fd_r" type="number" inputmode="decimal" step="0.01"></label></div>
+    <div class="row"><label class="f">Term (months)<input id="w_fd_m" type="number" inputmode="numeric" placeholder="2y 6m = 30"></label><label class="f">Start date<input id="w_fd_s" type="date"></label></div>
+    <div class="eyebrow">Recurring deposit (RD)</div><label class="f">Name<input id="w_rd_n" placeholder="e.g. My RD"></label>
+    <div class="row"><label class="f">Monthly amount (₹)<input id="w_rd_m" type="number" inputmode="decimal"></label><label class="f">Interest rate (% a year)<input id="w_rd_r" type="number" inputmode="decimal" step="0.01"></label></div>
+    <div class="row"><label class="f">Term (months)<input id="w_rd_t" type="number" inputmode="numeric" placeholder="5 years = 60"></label><label class="f">First deposit date<input id="w_rd_s" type="date"></label></div>
+    <label class="f">Different amounts by month (optional)<input id="w_rd_a" placeholder="e.g. 2000, 2000, 3500"></label>` : '';
+  const add = (k, label) => `<button class="sm" type="button" onclick="swAddRow('${k}')">+ ${label}</button>`;
+  const body = {
+    upi: `${swAdded([...exApps])}<div id="sw_app_list" class="sw-apps2">${APPS.filter(a => !exApps.has(a)).map(a => `<label class="ck sw-ap"><input type="checkbox" class="s-app e-on" value="${esc(a)}" onchange="swCount();saveDraft()"><span>${mark(guessBrand(a), 18, a)} ${esc(a)}</span></label>`).join('')}</div><button class="sm" type="button" onclick="swCustomApp('')">+ Add custom UPI app</button>`,
+    bank: `${swAdded(byT('bank'))}<div class="list">${bankP.filter(p => !have.has(p.acct.name)).map(p => swRow('w_' + p.key, p.acct.name, '', swBankFields('w_' + p.key, p), mkA(p))).join('')}<div id="sw_rows_bank"></div></div>${add('bank', 'Another bank')}`,
+    card: `<div class="seg sw-tabs"><button type="button" class="on" onclick="swCardTab('debit')">Debit cards</button><button type="button" onclick="swCardTab('credit')">Credit cards</button></div>
+      <div id="sw_ct_debit">${swAdded(S.methods.filter(m => m.kind==='debit').map(m => m.name))}<div class="list">${debits.map(([p, m, i]) => swRow(`w_d_${p.key}_${i}`, m.name, esc(p.acct.name), m.cb && m.cb.monthCap ? swNum(`w_d_${p.key}_${i}_cb`, 'Cashback earned this month so far (₹)', 'as your bank shows') : '<div class="sub">Linked to ' + esc(p.acct.name) + '. Cashback rules: Cards → the card → Edit.</div>', mkA(p))).join('')}<div id="sw_rows_debit"></div></div>${add('debit', 'Another debit card')}</div>
+      <div id="sw_ct_credit" hidden>${swAdded(byT('credit'))}<div class="list">${creditP.filter(p => !have.has(p.acct.name)).map(p => swRow('w_' + p.key, p.acct.name, p.acct.note ? esc(p.acct.note) : 'Credit card', swCreditFields('w_' + p.key, p), mkA(p))).join('')}<div id="sw_rows_credit"></div></div>${add('credit', 'Another credit card')}</div>`,
+    wallet: `${swAdded(byT('wallet'))}<div class="list">${walletP.filter(p => !have.has(p.acct.name)).map(p => swRow('w_' + p.key, p.acct.name, SW_TIE[p.key] || '', `<div class="row">${swNum('w_' + p.key + '_b', 'Balance now (₹)')}</div>`, mkA(p))).join('')}<div id="sw_rows_wallet"></div></div>${add('wallet', 'Another wallet')}`,
+    cash: `${swAdded(byT('cash'))}<div class="list">${SW_SEGS.filter(([k]) => !segHave.has(k)).map(([k, l, nw]) => swRow('w_cash_' + k, l, nw ? 'Counted in your net worth' : 'Not counted – shown separately', swCashFields('w_cash_' + k, nw), mark('cash', 26, l))).join('')}<div id="sw_rows_cash"></div></div>${add('cash', 'Another cash box')}`,
+    invest: `${swAdded(byT('invest'))}<div class="list">${invP.filter(p => !have.has(p.acct.name)).map(p => swRow('w_' + p.key, p.acct.name, p.acct.reserve ? 'Kept aside – never in net worth' : 'Private', `<div class="row">${swNum('w_' + p.key + '_b', p.bal || 'Balance now (₹)')}</div>${stableBlock(p)}`, mkA(p))).join('')}<div id="sw_rows_invest"></div></div>${add('invest', 'Another platform')}<div class="sub">FDs, RDs, gold and shares go inside a platform: after adding it, tap <b>Add holding</b> on its card.</div>`,
+    other: `<div id="sw_rows_other"></div>${add('other', 'Something else')}${wizard ? '' : `<div class="row" style="margin-top:6px"><button class="sm" type="button" onclick="closeModal();ppModal()">+ PayPal (linked only)</button><button class="sm" type="button" onclick="closeModal();giftModal()">+ Gift card</button></div>`}`
+  };
+  const haveN = { upi:exApps.size, bank:byT('bank').length, card:S.methods.filter(m => m.kind==='debit').length + byT('credit').length, wallet:byT('wallet').length, cash:byT('cash').length, invest:byT('invest').length, other:0 };
+  return `<div class="sw-guide"><b>How to add</b><div class="sub">Go through the seven boxes in order – or only the ones you need. Nothing is ticked at first. Tick what you have, fill the few fields that appear, and tap <b>Done – next</b>. The <b>?</b> on each box explains it. You can come back any time with <b>+ Add</b>.</div></div>
+  <div class="sw-boxes">${SW.map(([k, t, d, h], i) => `<details class="sw-box" data-s="${k}" data-have="${haveN[k]}" ${k===(openKey || 'upi') ? 'open' : ''}><summary onclick="swSum(event,'${k}')"><span class="sw-num">${i + 1}</span><span class="sw-tt">${t}</span><span class="sw-chip chip"></span><button type="button" class="sw-q" aria-label="Help for ${t}" onclick="swHelp(event,'${k}')">?</button></summary>
+    <div class="sw-body"><div class="sub">${d}</div><div class="sw-helpt" id="sw_h_${k}" hidden>${h}</div>${body[k]}<div class="row sw-nx"><button type="button" class="pri sm" onclick="swNext('${k}')">${i < SW.length - 1 ? 'Done – next' : 'Done'}</button></div></div></details>`).join('')}</div>`;
+}
+function swCardTab(t){ document.querySelectorAll('.sw-tabs button').forEach((b, i) => b.classList.toggle('on', (i===0) === (t==='debit'))); document.getElementById('sw_ct_debit').hidden = t!=='debit'; document.getElementById('sw_ct_credit').hidden = t!=='credit'; haptic(3); saveDraft(); }
+function addHub(sec){
+  V.swRows = []; V.swApps = []; swC = 0;
+  openModal('Add to your tracker', `<div id="swz" class="sw-hub">${swHTML(false, sec)}</div><div class="row"><button class="pri" onclick="swApply(false)">Add what I ticked</button><button onclick="closeModal()">Close</button></div>`);
+  swBankSync(); swCount();
+}
+/* first-run guide: what you type survives switching apps, refreshes and the browser closing the page */
+const DRAFT = 'moneyTrackerDraft';
+function saveDraft(){ if(!needsSetup() || !document.querySelector('.wz')) return; try{ const d = { v:2, vals:{}, rows:V.swRows.slice(), apps:V.swApps.slice(), open:(document.querySelector('.sw-box[open]') || {dataset:{}}).dataset.s || '', tab:document.getElementById('sw_ct_credit') && !document.getElementById('sw_ct_credit').hidden ? 'credit' : 'debit' };
+  document.querySelectorAll('.wz input[id^="w_"], .wz select[id^="w_"]').forEach(i => { d.vals[i.id] = i.type==='checkbox' ? i.checked : i.value; });
+  d.link = {}; document.querySelectorAll('.wz .sw-apps[data-for]').forEach(h => { const on = [...h.querySelectorAll('.e-app:checked')].map(x => x.value); if(on.length) d.link[h.dataset.for] = on; });
+  d.sapps = [...document.querySelectorAll('.wz .s-app:checked')].map(x => x.value); localStorage.setItem(DRAFT, JSON.stringify(d)); }catch(e){} }
+function restoreDraft(){ try{ const d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); if(!d || d.v!==2 || !document.querySelector('.wz .sw-box')) return;
+  (d.apps || []).forEach(a => { if(!swAllApps().some(x => x===a)) V.swApps.push(a); swAddApp2(a); }); V.swRows = []; (d.rows || []).forEach(r => swAddRow(r.k, r.n, true));
+  Object.keys(d.vals || {}).forEach(id => { const i = document.getElementById(id); if(!i) return; if(i.type==='checkbox'){ i.checked = !!d.vals[id]; if(i.classList.contains('e-on')) swTick(i); } else i.value = d.vals[id]; });
+  swBankSync(); Object.keys(d.vals || {}).forEach(id => { const i = document.getElementById(id); if(i && i.classList.contains('e-bank')) i.value = d.vals[id]; });
+  Object.keys(d.link || {}).forEach(f => d.link[f].forEach(a => { const c = document.querySelector(`.sw-apps[data-for="${f}"] .e-app[value="${CSS.escape(a)}"]`); if(c) c.checked = true; }));
+  (d.sapps || []).forEach(a => { const c = document.querySelector(`.s-app[value="${CSS.escape(a)}"]`); if(c) c.checked = true; });
+  if(d.tab==='credit') swCardTab('credit'); if(d.open) swSet(d.open, true); swCount(); }catch(e){} }
+function swAddApp2(n){ document.querySelectorAll('.sw-apps').forEach(h => { if(!h.querySelector(`.e-app[value="${CSS.escape(n)}"]`)) h.insertAdjacentHTML('beforeend', swAppChk(n)); }); const l = document.getElementById('sw_app_list'); if(l && !l.querySelector(`.s-app[value="${CSS.escape(n)}"]`)) l.insertAdjacentHTML('beforeend', `<label class="ck sw-ap"><input type="checkbox" class="s-app e-on" value="${esc(n)}" onchange="swCount();saveDraft()"><span>${mark(guessBrand(n), 18, n)} ${esc(n)}</span></label>`); }
+function clearDraft(){ try{ localStorage.removeItem(DRAFT); }catch(e){} }
+document.addEventListener('input', e => { if(e.target.closest && e.target.closest('.wz')){ const it = e.target.closest('.sw-it:not(.cust)'), on = it && it.querySelector('.e-on'); if(on && !on.checked && e.target!==on && e.target.value!==''){ on.checked = true; swTick(on); } saveDraft(); } });
+document.addEventListener('change', e => { if(e.target.closest && e.target.closest('.wz')) saveDraft(); });
+function rWelcome(){
+  V.swRows = []; V.swApps = []; swC = 0;
+  return `<div class="card wz"><div class="script" style="font-size:2.4rem;color:var(--accent)">Let's set up</div>
+    <div class="sub">Private to this phone – nothing is uploaded. Add what you use, one box at a time, and type the balances your apps show <b>right now</b>. From then on the tracker keeps count of every rupee.</div>
+    <label class="f">Your name<input id="w_name" value="${esc(S.userName)}" placeholder="e.g. Asha"></label>
+    ${swHTML(true)}
+    <button class="pri" id="sw_go" onclick="swApply(true)">Create my tracker</button>
+    <div class="sub">Missing something? Skip it now – <b>+ Add</b> in Cards brings this guide back any time.</div>
+    <div class="sub">Already used this app on another phone? Restore that backup instead – everything comes back.</div><div class="row"><button onclick="$('imp0').click()">Restore a backup</button><button onclick="pasteRestoreModal()">Paste backup text</button></div></div>`;
+}
+/* create everything that was ticked */
+function swApply(wizard){
+  const g = id => document.getElementById(id), on = id => !!(g(id) && g(id).checked), val = id => g(id) ? g(id).value : '', num = id => parseFloat(val(id)), rows = [...document.querySelectorAll('.sw-it.cust')], have = swHave(), bankId = {}, apps = new Set(), out = { n:0, names:[] };
+  const bad = rows.find(r => !val(r.dataset.e + '_n').trim()); if(bad){ toast('Give every new item a name – or remove it with ×'); bad.scrollIntoView({ block:'center', behavior:'smooth' }); return; }
+  const nobank = rows.find(r => r.dataset.k==='debit' && !val(r.dataset.e + '_k')); if(nobank){ toast('Pick the bank for “' + val(nobank.dataset.e + '_n').trim() + '”'); nobank.scrollIntoView({ block:'center', behavior:'smooth' }); return; }
+  const linked = id => [...document.querySelectorAll(`.sw-apps[data-for="${id}"] .e-app:checked`)].map(x => x.value);
+  const mk = (proto, bal, lim) => { const a = Object.assign({ id:uid(), opening:0, checkedAt:Date.now() }, JSON.parse(JSON.stringify(proto)));
+    if(a.type==='credit'){ const av = isNaN(bal) ? 0 : bal, l = lim > 0 ? lim : av; a.limit = Math.max(l, av); a.opening = -(a.limit - av); } else a.opening = isNaN(bal) ? 0 : bal;
+    S.accounts.push(a); out.n++; out.names.push(a.name); return a; };
+  const addM = (a, m) => { const o = Object.assign({ id:uid(), accountId:a.id, inactive:!!a.inactive }, JSON.parse(JSON.stringify(m))); S.methods.push(o); return o; };
+  const upiM = (p, a, app) => (p && (p.methods || []).find(m => m.kind==='upi' && m.app===app)) || { name:`${app} · ${a.name}`, kind:'upi', app, modes: a.type==='credit' ? ['qr'] : ['p2p','qr'] };
+  const linkApps = (id, a, p) => linked(id).forEach(app => { apps.add(app); addM(a, upiM(p, a, app)); });
+  const noInact = p => { const o = Object.assign({}, p.acct); delete o.inactive; return o; };
+  // banks
+  PRESETS.filter(p => p.acct.type==='bank' && p.key!=='otherbank' && !have.has(p.acct.name)).forEach(p => { const id = 'w_' + p.key; if(!on(id)) return; const a = mk(noInact(p), num(id + '_b')); if(num(id + '_m') > 0) a.minBal = num(id + '_m'); a.upiLimit = +val(id + '_u') || 0; bankId['pre:' + p.key] = a.id; linkApps(id, a, p); });
+  rows.filter(r => r.dataset.k==='bank').forEach(r => { const id = r.dataset.e, a = mk({ name:val(id + '_n').trim(), type:'bank', minBal:+val(id + '_m') || 0, upiLimit:+val(id + '_u') || 0, brand:'' }, num(id + '_b')); bankId['row:' + id] = a.id; linkApps(id, a, null); });
+  // credit cards (with their linked apps)
+  PRESETS.filter(p => p.acct.type==='credit' && !have.has(p.acct.name)).forEach(p => { const id = 'w_' + p.key; if(!on(id)) return; const a = mk(Object.assign({}, p.acct, { billDay:+val(id + '_bd') || p.acct.billDay || 15, dueDay:+val(id + '_dd') || p.acct.dueDay || 5 }), num(id + '_a'), num(id + '_l')); (p.methods || []).filter(m => m.kind!=='upi').forEach(m => addM(a, m)); linkApps(id, a, p); });
+  rows.filter(r => r.dataset.k==='credit').forEach(r => { const id = r.dataset.e, nm = val(id + '_n').trim(), a = mk({ name:nm, type:'credit', billDay:+val(id + '_bd') || 15, dueDay:+val(id + '_dd') || 5, minDuePct:10, note:on(id + '_v') ? 'Virtual card' : '' }, num(id + '_a'), num(id + '_l')); addM(a, { name:nm, kind:'credit', modes:on(id + '_v') ? ['online'] : ['online', 'pos'] }); linkApps(id, a, null); });
+  // debit cards
+  const bankFor = v => { if(!v) return null; const [t, k] = [v.slice(0, v.indexOf(':')), v.slice(v.indexOf(':') + 1)]; return t==='acc' ? k : bankId[v]; };
+  PRESETS.filter(p => p.acct.type==='bank' && p.key!=='otherbank').forEach(p => (p.methods || []).forEach((m, i) => { if(m.kind!=='debit') return; const id = `w_d_${p.key}_${i}`; if(!on(id)) return;
+    let bid = bankId['pre:' + p.key] || (S.accounts.find(a => a.name===p.acct.name) || {}).id; if(!bid){ bid = mk(noInact(p), 0).id; bankId['pre:' + p.key] = bid; }
+    const mm = addM(acc(bid), m), cbv = num(id + '_cb'); if(mm.cb && mm.cb.monthCap && cbv > 0) setPriorCb(mm.id, cbv);
+    (p.reminders || []).forEach(r => { if(!S.reminders.some(x => x.accountId===bid && x.autoAmt)) S.reminders.push(Object.assign({ id:uid(), done:{}, accountId:bid }, r)); }); out.n++; out.names.push(m.name); }));
+  for(const r of rows.filter(r => r.dataset.k==='debit')){ const id = r.dataset.e, bid = bankFor(val(id + '_k'));
+    addM(acc(bid), { name:val(id + '_n').trim() + (on(id + '_v') ? ' (virtual)' : ''), kind:'debit', modes:on(id + '_v') ? ['online'] : ['pos', 'online'] }); out.n++; out.names.push(val(id + '_n').trim()); }
+  // wallets
+  PRESETS.filter(p => p.acct.type==='wallet' && !have.has(p.acct.name)).forEach(p => { const id = 'w_' + p.key; if(!on(id)) return; const a = mk(p.acct, num(id + '_b')); (p.methods || []).forEach(m => addM(a, m)); });
+  rows.filter(r => r.dataset.k==='wallet').forEach(r => { const id = r.dataset.e, nm = val(id + '_n').trim(), ia = val(id + '_i'), a = mk({ name:nm, type:'wallet', note:ia ? 'Inside ' + ia : '' }, num(id + '_b')); addM(a, { name:nm, kind:'wallet', modes:['qr', 'online'] }); if(ia) apps.add(ia); });
+  // cash
+  const seg = (k, l, nw0) => { const id = 'w_cash_' + k; if(!on(id)) return; const nm = k==='personal' && !S.accounts.some(a => a.name==='Cash') ? 'Cash' : 'Cash · ' + l, a = mk({ name:nm, type:'cash', brand:'cash', seg:k }, num(id + '_b')); if(!on(id + '_nw')) a.nw = false; addM(a, { name:nm, kind:'cash', modes:['p2p', 'pos'] }); };
+  SW_SEGS.forEach(([k, l, nw]) => seg(k, l, nw));
+  rows.filter(r => r.dataset.k==='cash').forEach(r => { const id = r.dataset.e, nm = 'Cash · ' + val(id + '_n').trim(), a = mk({ name:nm, type:'cash', brand:'cash', seg:val(id + '_n').trim().toLowerCase() }, num(id + '_b')); if(!on(id + '_nw')) a.nw = false; addM(a, { name:nm, kind:'cash', modes:['p2p', 'pos'] }); });
+  // investments
+  PRESETS.filter(p => p.acct.type==='invest' && !have.has(p.acct.name)).forEach(p => { const id = 'w_' + p.key; if(!on(id)) return; const a = mk(p.acct, num(id + '_b')); if(p.key==='stable') seedStable(a); });
+  rows.filter(r => r.dataset.k==='invest').forEach(r => { const id = r.dataset.e; mk({ name:val(id + '_n').trim(), type:'invest', priv:true }, num(id + '_b')); });
+  // others
+  rows.filter(r => r.dataset.k==='other').forEach(r => { const id = r.dataset.e, t = val(id + '_t') || 'bank', nm = val(id + '_n').trim(), a = mk({ name:nm, type:t, ...(t==='invest' ? { priv:true } : {}) }, num(id + '_b')); if(t!=='invest') addM(a, { name:nm, kind:t==='cash' ? 'cash' : t==='wallet' ? 'wallet' : 'upi', modes:t==='bank' ? ['p2p', 'qr'] : ['p2p', 'pos'] }); });
+  // UPI apps become cards of their own
+  document.querySelectorAll('.s-app:checked').forEach(c => { apps.add(c.value); });
+  const before = (S.apps || []).length; S.apps = [...new Set((S.apps || []).concat([...apps]))];
+  if(!out.n && S.apps.length===before && !apps.size) return toast('Tick at least one thing to add');
+  if(wizard) S.userName = val('w_name').trim() || S.userName;
+  clearDraft(); save(); closeModal(); haptic([8, 30, 12]);
+  if(wizard){ V.tab = 'home'; render(); if(out.n) balanceCheckModal(); } else { render(); toast(out.n ? (out.n === 1 ? out.names[0] + ' added' : out.n + ' items added') : 'UPI apps added'); }
 }
 /* apply a balance you read from your bank / app: sets the start if nothing was recorded yet, otherwise records a correction */
 function applyActual(id, v){
@@ -927,6 +1129,20 @@ function addPreset(p, bal, lim){
   (p.reminders||[]).forEach(r => S.reminders.push(Object.assign({ id:uid(), done:{}, accountId:a.id }, r)));
   return a;
 }
+
+/* ---------- guides: first-time tips you can switch off, and a ? on each screen ---------- */
+const tipsOn = () => !(S.tips && S.tips.off);
+function tip(key, html){ if(!tipsOn() || (S.tips && S.tips.seen && S.tips.seen[key])) return ''; return `<div class="tip" data-tip="${key}"><div>${html}</div><div class="tip-a"><button class="sm" type="button" onclick="tipSeen('${key}')">Got it</button><button class="sm ghost" type="button" onclick="tipsSet(false)">Turn tips off</button></div></div>`; }
+function tipSeen(k){ S.tips = S.tips || {}; (S.tips.seen = S.tips.seen || {})[k] = 1; save(); document.querySelectorAll(`[data-tip="${k}"]`).forEach(e => { e.classList.add('out'); setTimeout(() => e.remove(), 260); }); }
+function tipsSet(on){ S.tips = S.tips || {}; S.tips.off = !on; if(on) S.tips.seen = {}; save(); render(); toast(on ? 'Tips are on' : 'Tips are off – turn them on in Settings'); }
+const HELP = {
+  wallet:['Your wallet', 'Each card is one bank, card, UPI app, wallet or investment. <b>Swipe</b> sideways to move between cards and <b>tap</b> a card to flip it for its details and limits. The buttons under a card are what you can do with it. <b>+ Add</b> adds anything new, step by step.'],
+  accounts:['Accounts and cards', 'An <b>account</b> holds money: a bank, cash, a wallet or a credit card. A <b>payment method</b> is a way to pay from it: a UPI app, a debit card, cash. <b>+ Add</b> opens a guide with seven boxes. <b>Edit</b> changes something you already added.'],
+  ipo:['IPOs', 'Save an IPO as a <b>plan</b> before bidding opens: no money moves and you see if you will have enough. <b>Apply</b> puts the money on hold. After the result, mark how many lots each bid got, then confirm what the bank did. Money you brought in for it can be sent back afterwards. <b>Money on the way</b> tracks withdrawals that have not reached the bank yet.'],
+  nw:['Net worth', 'Everything you own minus what you owe. Cash boxes with <b>Include in my net worth</b> switched off (like office or family cash) are shown separately and not added.']
+};
+const hq = k => `<button class="hq" type="button" onclick="helpOpen('${k}')" aria-label="Help">?</button>`;
+function helpOpen(k){ const h = HELP[k]; if(h) ask(h[0], h[1], 'Got it', null, false, 'Close'); }
 
 /* ---------- ADD ---------- */
 /* received money: which app or channel it came through, for the bank you chose */
@@ -1114,12 +1330,12 @@ function delTx(id){ ask('Delete forever?', 'This removes the reverted entry from
 function rAccounts(){
   const mCard = m => { const a = acc(m.accountId), r = m.cb;
     return `<div class="item ${m.inactive?'rev':''}"><div class="l"><div class="t">${esc(m.name)}</div><div class="sub">${esc(m.kind.toUpperCase())} → ${esc(a?.name||'?')} · ${m.modes.map(x=>MODES[x]).join(', ')}</div>${r?.pct?`<span class="chip g">${r.pct}% cashback${r.txnCap?` · max ${inr(r.txnCap)}/txn`:''}${r.monthCap?` · ${inr(r.monthCap)}/month`:''}</span>`:''}${m.inactive?' <span class="chip w">inactive</span>':''}</div><button class="sm" onclick="methModal('${m.id}')">Edit</button></div>`; };
-  return `<div class="card"><h2>Accounts & cards <span><button class="sm pri" onclick="accModal()">+ Add</button></span></h2>
-    <div class="sub">An <b>account</b> holds money (bank, cash, credit card). A <b>payment method</b> is how you pay from it (UPI, debit card…), with its cashback rule.</div>
+  return tip('acc', 'This page lists everything you track. Tap <b>+ Add</b> for a guided form with seven small boxes. To change something, tap <b>Edit</b> on it. An <b>account</b> holds money; a <b>payment method</b> is a way to pay from it.') + `<div class="card"><h2><span>Accounts & cards ${hq('accounts')}</span> <span><button class="sm pri" onclick="addHub()">+ Add</button></span></h2>
+    <div class="sub">An <b>account</b> holds money (bank, cash, wallet, credit card). A <b>payment method</b> is a way to pay from it (a UPI app, a debit card…), with its cashback rule.</div>
     <div class="list">${S.accounts.map(a => { const s = stmt(a);
       return `<div class="item ${a.inactive?'rev':''}"><div class="l"><div class="t"><span style="display:inline-flex;gap:10px;align-items:center">${mark(a.brand||guessBrand(a.name),20,a.name)}${esc(a.name)}</span></div><div class="sub">${TYPES[a.type]}${a.minBal?` · min ${inr(a.minBal)}`:''}${a.inactive?' · inactive':''}</div>${s&&s.billed>0?`<div class="sub">Statement ${inr(s.billed)} · min due ${inr(s.minDue)} by ${fdate(s.due)}</div>`:''}</div><div class="r"><div class="${net(a.id)<0&&a.type!=='credit'&&a.type!=='external'?'neg':''}"><b>${a.type==='credit'?mi(avail(a),a)+'</b><div class="sub">available':mi(net(a.id),a)+'</b><div class="sub">'}</div></div><button class="sm" onclick="accModal('${a.id}')">Edit</button></div></div>`; }).join('')}</div>
     <div class="row"><button onclick="tidyModal()">Edit all accounts at once</button></div>
-    <button onclick="presetModal()">Quick add (banks, cards, wallets, investments…)</button></div>
+    </div>
   ${upiCard()}
   <div class="card"><h2>Payment methods <button class="sm pri" onclick="methModal()">+ Add</button></h2><div class="list">${S.methods.map(mCard).join('') || '<div class="empty">None yet.</div>'}</div></div>`;
 }
@@ -1168,6 +1384,7 @@ function accModal(id){
   <div id="m_cc"><div class="row"><label class="f">Credit limit / available (₹)<input id="m_lim" type="number" value="${a.limit||0}"></label><label class="f">Min due %<input id="m_pct" type="number" value="${a.minDuePct||10}"></label></div>
   <div class="row"><label class="f">Statement day of month<input id="m_bill" type="number" min="1" max="31" value="${a.billDay||15}"></label><label class="f">Payment due day<input id="m_due" type="number" min="1" max="31" value="${a.dueDay||5}"></label></div></div>
   ${depRuleHTML(id)}
+  <label class="sw-sw" id="m_nww"><input type="checkbox" id="m_nw" ${a.nw===false?'':'checked'}><i></i><span>Include in my net worth<span class="sub" style="display:block">Switch off for office or family money. It is then shown separately.</span></span></label>
   <label class="ck"><input type="checkbox" id="m_inact" ${a.inactive?'checked':''}><span>Not using right now (hide from pay options)</span></label>
   <label class="ck"><input type="checkbox" id="m_priv" ${a.priv?'checked':''}><span>Private – hide this balance until I tap it${S.lock?' and enter my PIN':''}</span></label>
   ${id ? `<div class="sub">Balance now: <b>${a.type==='credit'?inr(avail(a))+' available':inr(net(id))}</b></div><button class="good" onclick="reconModal('${id}')">✔ Set actual balance (reconcile)</button>` : ''}
@@ -1194,11 +1411,12 @@ function pickImg(f){
     c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); V.accImg = c.toDataURL('image/jpeg', .78); toast('Image ready – press Save'); }; im.src = r.result; };
   r.readAsDataURL(f);
 }
-function accTypeUI(){ const t = mv('m_type'); if($('m_dep')) $('m_dep').style.display = ['bank','credit','wallet'].includes(t) ? '' : 'none'; $('m_cc').style.display = t==='credit' ? '' : 'none'; $('m_nc').style.display = t==='credit' ? 'none' : ''; }
+function accTypeUI(){ const t = mv('m_type'); if($('m_nww')) $('m_nww').style.display = ['cash','bank','wallet'].includes(t) ? '' : 'none'; if($('m_dep')) $('m_dep').style.display = ['bank','credit','wallet'].includes(t) ? '' : 'none'; $('m_cc').style.display = t==='credit' ? '' : 'none'; $('m_nc').style.display = t==='credit' ? 'none' : ''; }
 function saveAcc(id){
   const name = mv('m_name').trim(); if(!name) return toast('Name needed');
   const depAllowed = ['bank','credit','wallet'].includes(mv('m_type')); if(depAllowed && !depRuleCheck()) return;
   const o = id ? acc(id) : { id:uid(), checkedAt:Date.now() };
+  if($('m_nw') && ['cash','bank','wallet'].includes(mv('m_type'))){ if($('m_nw').checked) delete o.nw; else o.nw = false; }
   Object.assign(o, { name, type:mv('m_type'), inactive:$('m_inact').checked, brand:mv('m_brand'), note:mv('m_note').trim(), priv:$('m_priv').checked, reserve:mv('m_type')==='invest' && !!$('m_res')?.checked });
   if($('m_hue').dataset.t) o.hue = +mv('m_hue');
   if(V.accImg === null) delete o.img; else if(V.accImg) o.img = V.accImg;
@@ -1231,9 +1449,10 @@ function methModal(id){
   const m = id ? meth(id) : { kind:'upi', modes:['p2p','qr'], cb:{} }, r = m.cb || {};
   openModal(id ? 'Edit payment method' : 'Add payment method', `
   <label class="f">Name<input id="p_name" value="${esc(m.name||'')}" placeholder="e.g. Savings debit card"></label>
-  <div class="row"><label class="f">Kind<select id="p_kind">${['upi','debit','credit','cash'].map(k=>`<option ${m.kind===k?'selected':''}>${k}</option>`).join('')}</select></label>
+  <div class="row"><label class="f">Kind<select id="p_kind">${[['upi','UPI app'],['debit','Debit card'],['credit','Credit card'],['wallet','Wallet'],['cash','Cash']].map(([k,l])=>`<option value="${k}" ${m.kind===k?'selected':''}>${l}</option>`).join('')}</select></label>
   <label class="f">UPI app (only for UPI)<input id="p_app" value="${esc(m.app||'')}" list="applist" placeholder="PhonePe, BHIM, Navi…"></label><datalist id="applist">${APPS.map(x=>`<option value="${x}">`).join('')}</datalist>
-  <label class="f">Pays from account<select id="p_acc">${S.accounts.map(a=>`<option value="${a.id}" ${m.accountId===a.id?'selected':''}>${esc(a.name)}</option>`).join('')}</select></label></div>
+  <label class="f">Pays from account<select id="p_acc">${S.accounts.filter(a => ['bank','credit','wallet','cash'].includes(a.type)).map(a=>`<option value="${a.id}" ${m.accountId===a.id?'selected':''}>${esc(a.name)} · ${TYPES[a.type]}</option>`).join('')}</select></label></div>
+  <div class="sub">This is the way you pay, and where the money leaves from: a UPI app or debit card → a bank; a credit card → itself. To add a brand-new bank, card or wallet use <b>+ Add</b> on the Accounts page instead.</div>
   <div class="f">Can be used for<div class="seg">${Object.keys(MODES).map(k=>`<label style="display:flex;gap:5px;align-items:center"><input type="checkbox" style="width:auto" class="p_mode" value="${k}" ${m.modes.includes(k)?'checked':''}>${MODES[k]}</label>`).join('')}</div></div>
   <details ${m.limits?'open':''}><summary>Card limits</summary><div class="sub" style="margin:8px 0">Leave blank if your bank has no limit. These are checked when you pick a card and shown on the card's back.</div>
   <div class="row"><label class="f">ATM / day (₹)<input id="l_atm" type="number" value="${m.limits?.atm||''}"></label><label class="f">Shop (PoS) / day (₹)<input id="l_pos" type="number" value="${m.limits?.pos||''}"></label><label class="f">Online / day (₹)<input id="l_on" type="number" value="${m.limits?.online||''}"></label></div>
@@ -1367,6 +1586,8 @@ function rSettings(){
     <div class="row">${S.invLock ? `<button onclick="invPinModal()">Change investments PIN</button><button class="bad" onclick="removeInvPin()">Remove</button>` : `<button class="pri" onclick="invPinModal()">Set investments PIN</button>`}</div></div>
   <div class="card"><h2>Notifications</h2><div class="sub">${NATIVE ? 'Phone notifications reach you even when the app is closed.' : 'Reminders show on Home. Phone notifications work in the Android app.'} ${notifEvents().length} coming up in the next 45 days.</div><button class="pri" onclick="go('notifs')">Open notification settings</button></div>
   <div class="card"><h2>About</h2><div class="sub">Made by Koushik. ${ED.name} ${V.appVer ? '· version ' + esc(V.appVer) : '· web version'}. Your data stays on this phone. Back it up now and then (Settings → Security &amp; privacy → Make encrypted backup).</div><div class="row"><button onclick="checkUpdate()">Get the newest version</button><button onclick="S.welcomeUntil=0;V.welcomeHide=false;save();go('home')">Show welcome message</button></div></div>
+  <div class="card"><h2>Tips and guides</h2><div class="sub">Small first-time tips appear on some screens, and a <b>?</b> explains each section. Switch them off once you know your way around.</div>
+    <label class="sw-sw"><input type="checkbox" ${tipsOn()?'checked':''} onchange="tipsSet(this.checked)"><i></i><span>Show tips</span></label><div class="row"><button onclick="S.tips={off:false,seen:{}};save();render();toast('All tips will show again')">Show all tips again</button></div></div>
   <div class="card"><h2>Haptics</h2><div class="sub">A light vibration when cards snap, flip, stack and when you enter a PIN (Android phones).</div>
     <label class="ck"><input type="checkbox" ${S.haptics!==false?'checked':''} onchange="S.haptics=this.checked;save();if(this.checked)haptic(15)"><span>Vibrate on taps and card moves</span></label></div>
   <div class="card"><h2>Confirmation popups</h2><div class="sub">You are asked to confirm: reverting an entry, deleting anything, payments or transfers at or above the amount below, new autopay / EMI / monthly repayments, and showing private balances.</div>
@@ -1699,12 +1920,6 @@ function seedStable(a){
   if(hs.length) a.holdings = (a.holdings || []).concat(hs);
 }
 /* setup form draft: what you type survives switching apps, refreshes and the browser closing the page */
-const DRAFT = 'moneyTrackerDraft';
-function saveDraft(){ if(!needsSetup()) return; try{ const d = {}; document.querySelectorAll('.wz input[id^="w_"]').forEach(i => { d[i.id] = i.type==='checkbox' ? i.checked : i.value; }); localStorage.setItem(DRAFT, JSON.stringify(d)); }catch(e){} }
-function restoreDraft(){ try{ const d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); if(!d) return; Object.keys(d).forEach(id => { const i = $(id); if(!i) return; if(i.type==='checkbox') i.checked = !!d[id]; else i.value = d[id]; }); }catch(e){} }
-function clearDraft(){ try{ localStorage.removeItem(DRAFT); }catch(e){} }
-document.addEventListener('input', e => { if(!(e.target.closest && e.target.closest('.wz'))) return; const id = e.target.id || '', m = id.match(/^w_(?:b|l|cb)_(.+)$/), key = m ? m[1] : /^w_(fd|rd)_/.test(id) ? 'stable' : null; if(key && e.target.value !== ''){ const c = $('w_' + key); if(c && !c.checked) c.checked = true; } saveDraft(); });
-document.addEventListener('change', e => { if(e.target.closest && e.target.closest('.wz')) saveDraft(); });
 function upgradeV11(){}
 function upgradeV9(){   // platforms: value is now cash + holdings; an old "current value" typed next to holdings must not double count
   if(S.v9) return; S.v9 = true;
@@ -1927,7 +2142,7 @@ function rPeople(){
 }
 function pplModal(p){
   const as = S.accounts.filter(a => ['bank','cash','wallet'].includes(a.type) && !a.inactive), ms = S.methods.filter(m => !m.inactive && acc(m.accountId) && !acc(m.accountId).inactive);
-  openModal('Lent / owed', `<label class="f">Person<input id="pp_n" value="${esc(p||'')}" list="pplist" placeholder="Name"></label><datalist id="pplist">${Object.keys(pplBal()).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+  openModal('Lent / owed', `<label class="f">Person<input id="pp_n" data-free="1" value="${esc(p||'')}" list="pplist" placeholder="Name"></label><datalist id="pplist">${Object.keys(pplBal()).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
     <label class="f">What happened<select id="pp_a" onchange="$('pp_rep').style.display=this.value==='borrowed'?'block':'none'">${Object.keys(PA).map(k => `<option value="${k}">${PA[k][0]}</option>`).join('')}</select></label>
     <div class="row"><label class="f">Amount (₹)<input id="pp_v" type="number" oninput="repayUI()"></label><label class="f">Date & time<input id="pp_d" type="datetime-local" value="${nowLocal()}"></label></div>
     <label class="f">Move the money in an account? <select id="pp_acc"><option value="">No – just note it</option>${as.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></label>
@@ -2060,7 +2275,7 @@ function unlockOk(pin){ V.unlocked = true; V.hiddenAt = 0; clearInterval(LKT); $
 /* ---------- Home: online / cash split ---------- */
 function moneySplit(){
   const act = S.accounts.filter(a => !a.inactive);
-  return { online: act.filter(a => ['bank','wallet'].includes(a.type)).reduce((x,a) => x + net(a.id), 0), cash: act.filter(a => a.type==='cash').reduce((x,a) => x + net(a.id), 0) };
+  return { online: act.filter(a => ['bank','wallet'].includes(a.type)).reduce((x,a) => x + net(a.id), 0), cash: act.filter(a => a.type==='cash' && a.nw!==false).reduce((x,a) => x + net(a.id), 0) };
 }
 
 /* ---------- tidy up account names, logos and types in one go ---------- */
@@ -2534,7 +2749,7 @@ function ipoDel(id){ const o = (S.ipos || []).find(x => x.id===id); if(!o) retur
 const IPST = { planned:['Planned', ''], pending:['On hold', 'w'], result:['Result in', 'w'], allotted:['Allotted', 'g'], not:['Not allotted', ''] };
 function ipoListHTML(){
   const today = ISO(new Date()), L = (S.ipos || []).filter(o => !['allotted','not'].includes(o.status) || !o.listing || o.listing >= today || leftOf(o) > .5).slice().sort((a, b) => (a.open || a.applied || '').localeCompare(b.open || b.applied || ''));
-  const head = `<div class="wh" style="margin-top:6px"><span class="eyebrow">IPOs</span><span><button class="sm ghost" onclick="holModal()">Holidays</button> <button class="sm ghost" onclick="transitModal()">+ On the way</button> <button class="sm" onclick="ipoModal()">+ IPO</button></span></div>`;
+  const head = tip('ipo', 'Plan an IPO <b>before</b> bidding opens to see if you will have enough. <b>Apply</b> puts the money on hold. After the result, mark how many lots each bid got.') + `<div class="wh" style="margin-top:6px"><span class="eyebrow">IPOs ${hq('ipo')}</span><span><button class="sm ghost" onclick="holModal()">Holidays</button> <button class="sm ghost" onclick="transitModal()">+ On the way</button> <button class="sm" onclick="ipoModal()">+ IPO</button></span></div>`;
   return trListHTML() + head + (L.length ? '' : '<div class="sub" style="padding:4px 2px 10px">Plan an IPO before bidding opens to see if you have enough, or apply to put the money on hold.</div>') + L.map(o => {
     const need = o.status==='pending' || o.status==='result' ? o.amount || ipoNeed(o) : ipoNeed(o), [sl, sc] = IPST[o.status] || ['', ''];
     const steps = [['Bidding opens', o.open || o.applied], ['Bidding closes', o.close], ['Allotment', o.allot], [o.status==='allotted' ? 'Funds debited' : o.status==='not' ? 'Funds released' : 'Funds unblock or debit', o.unblock], ['Listing', o.listing]];
@@ -2680,13 +2895,13 @@ function calcSave(){
 /* ---------- net worth (always computed from live data; opened with PIN only) ---------- */
 function nwData(now = new Date()){
   const act = S.accounts.filter(a => a.type!=='external'), bal = pplBal();
-  const spendable = act.filter(a => ['bank','cash','wallet'].includes(a.type)).map(a => ({ name:a.name, v:net(a.id), kind:a.type, off:!!a.inactive }));
+  const spendable = act.filter(a => ['bank','cash','wallet'].includes(a.type) && a.nw!==false).map(a => ({ name:a.name, v:net(a.id), kind:a.type, off:!!a.inactive })), outside = act.filter(a => a.nw===false).map(a => ({ name:a.name, v:net(a.id), kind:a.type, off:!!a.inactive }));
   const inv = act.filter(a => a.type==='invest' && !a.reserve).flatMap(a => { const l = (a.holdings || []).map(h => ({ name:`${a.name} · ${h.name || HTYPES[h.type]}`, v:holdingValue(h, now), kind:h.type })), c = net(a.id); if(Math.abs(c) > .004 || !l.length) l.unshift({ name:`${a.name} · balance`, v:c, kind:'invest' }); return l; });
   const recv = Object.keys(bal).filter(n => bal[n] > 0.004).map(n => ({ name:n, v:bal[n] })), owe = Object.keys(bal).filter(n => bal[n] < -0.004).map(n => ({ name:n, v:-bal[n] }));
   const cards = act.filter(a => a.type==='credit').map(a => ({ name:a.name, v:Math.max(0, -net(a.id)) })).filter(x => x.v > 0.004);
   const sum = l => l.reduce((x,i) => x + i.v, 0);
   const assets = sum(spendable) + sum(inv) + sum(recv), liab = sum(cards) + sum(owe);
-  return { spendable, inv, recv, owe, cards, assets, liab, total:assets - liab, spend:sum(spendable), invTotal:sum(inv) };
+  return { spendable, outside, inv, recv, owe, cards, assets, liab, total:assets - liab, spend:sum(spendable), invTotal:sum(inv) };
 }
 function upcoming(days = 30){
   const out = [], now = new Date();
@@ -2717,6 +2932,7 @@ function openNetWorth(){ ensureInvest(() => { const D = nwData(), up = upcoming(
     <div class="f"><span class="eyebrow">Net worth over time</span>${spark(hist)}</div>
     <div class="f"><span class="eyebrow">Where it sits</span>${donutHTML(parts)}</div>
     <div class="f"><span class="eyebrow">Accounts, cash and wallets</span><div class="list">${line(D.spendable)}</div></div>
+    ${D.outside.length ? `<div class="f"><span class="eyebrow">Not in your net worth (office, family…)</span><div class="list">${line(D.outside)}</div><div class="sub">Counted separately: ${inr(D.outside.reduce((x, i) => x + i.v, 0))}. Change this on the account: Edit → Include in my net worth.</div></div>` : ''}
     <div class="f"><span class="eyebrow">Investments</span><div class="list">${line(D.inv) || '<div class="sub">None added yet.</div>'}</div></div>
     <div class="f"><span class="eyebrow">People owe you</span><div class="list">${line(D.recv) || '<div class="sub">Nobody.</div>'}</div></div>
     <div class="f"><span class="eyebrow">What you owe (subtracted)</span><div class="list">${line(D.cards.map(c => ({ name:c.name + ' (card used)', v:c.v })).concat(D.owe.map(o => ({ name:o.name + ' (borrowed)', v:o.v }))), true) || '<div class="sub">Nothing.</div>'}</div></div>
@@ -2786,7 +3002,7 @@ function upiItem(app){
     return `<div class="meta" style="opacity:1"><span style="display:flex;gap:8px;align-items:center">${mark(brandOfAcc(a),16,a.name)}${esc(a.name)}${m.inactive||a.inactive?' (off)':''}</span><span>${lim ? mi(upiUsed(a),a) + ' / ' + mi(a.upiLimit,a) : a.type==='credit' ? 'card' : ''}</span></div>`; }).join('');
   const rowsB = ms.map(m => { const a = acc(m.accountId); if(!a) return ''; return `<div class="bk"><div class="bt">${mark(brandOfAcc(a),16,a.name)} ${esc(a.name)}${m.cb?.pct ? ` <span class="chip g">${m.cb.pct}%</span>` : ''}</div>${bl('Works for', m.modes.map(x => MODES[x]).join(', '))}${a.type==='bank' && a.upiLimit ? bl('UPI today', mi(upiUsed(a),a) + ' / ' + mi(a.upiLimit,a)) : ''}${a.type==='credit' ? '<div class="sub" style="color:inherit;opacity:.8">Merchants only – disabled for personal accounts.</div>' : ''}</div>`; }).join('');
   return { key:'upi:'+app, html: cw('upi:'+app, { br, cls:'upi', style:palStyle(br),
-    front:`<div class="top"><div><div class="nm">${esc(app)}</div><div class="ty">UPI · ${ms.length} linked</div></div><div class="logo">${mark(br,34,app)}</div></div><div class="bot"><div class="ty">Linked banks · used today</div>${rows}${ms.length > 4 ? `<div class="meta"><span>+ ${ms.length - 4} more</span></div>` : ''}</div>`,
+    front:`<div class="top"><div><div class="nm">${esc(app)}</div><div class="ty">UPI · ${ms.length} linked</div></div><div class="logo">${mark(br,34,app)}</div></div><div class="bot"><div class="ty">Linked banks · used today</div>${rows || '<div class="meta"><span>No bank linked yet – tap Link a bank</span></div>'}${ms.length > 4 ? `<div class="meta"><span>+ ${ms.length - 4} more</span></div>` : ''}</div>`,
     back:backHead(app + ' · UPI', br, app) + `<div class="bkw">${rowsB}</div>` + backFoot(`<button class="sm" onclick="event.stopPropagation();linkModal('${qs(app)}')">Link a bank</button>`) }) };
 }
 
@@ -2968,7 +3184,7 @@ function walletItems(tab){
   const act = S.accounts.filter(a => a.type!=='external');
   const banks = act.filter(a => ['bank','cash','wallet'].includes(a.type)).map(accItem).concat(act.filter(a => a.type==='paypal').map(ppItem));
   const credits = act.filter(a => a.type==='credit').map(accItem), debits = S.methods.filter(m => m.kind==='debit' && acc(m.accountId)).map(debitItem);
-  const apps = [...new Set(S.methods.filter(m => m.app && m.kind==='upi').map(m => m.app))].map(upiItem);
+  const apps = [...new Set(S.methods.filter(m => m.app && m.kind==='upi').map(m => m.app).concat(S.apps || []))].map(upiItem);
   const cbs = cbMethods().map(cbItem), invs = act.filter(a => a.type==='invest').map(invItem);
   if(!invs.length) invs.push(platAddItem());
   const bens = act.filter(a => benList().some(b => b.accId===a.id)).map(benItem);
@@ -2994,8 +3210,8 @@ function walletHTML(){
   if(!S.accounts.length) return '';
   const tab = V.wtab || 'all';
   const tabs = `<div class="wtabs">${WTABS.map(([k,l]) => `<button class="${tab===k?'on':''}" onclick="setWTab('${k}')">${l}</button>`).join('')}</div>`;
-  const add = { all:'accModal()', banks:'accModal()', cards:'methModal()', upi:'linkModal()', cashback:`rewardModal()`, benefits:`benefitModal()`, gifts:`giftModal()`, invest:'invAddModal()' }[tab];
-  const head = `<div class="wh"><span class="eyebrow">Wallet</span><span><button class="sm ghost" onclick="toggleStack()">${V.stack ? 'Carousel' : 'Stack'}</button> <button class="sm" onclick="${add}">+ Add</button></span></div>${tabs}`;
+  const add = { all:'addHub()', banks:"addHub('bank')", cards:"addHub('card')", upi:"addHub('upi')", cashback:`rewardModal()`, benefits:`benefitModal()`, gifts:`giftModal()`, invest:"addHub('invest')" }[tab];
+  const head = `<div class="wh"><span class="eyebrow">Wallet ${hq('wallet')}</span><span><button class="sm ghost" onclick="toggleStack()">${V.stack ? 'Carousel' : 'Stack'}</button> <button class="sm" onclick="${add}">+ Add</button></span></div>${tabs}`;
   if(tab==='invest' && !V.invOk) return `<div class="wallet">${head}<div class="card" style="align-items:center;text-align:center;gap:12px"><div class="logo" style="color:var(--accent)">${mark('invest',46)}</div><div class="t">Investments are private</div><div class="sub">They are never part of your total balance. Enter your PIN to open them – fingerprint is not accepted here.</div><button class="pri" onclick="setWTab('invest')">Enter PIN</button></div></div>`;
   const items = walletItems(tab);
   if(!items.length) return `<div class="wallet">${head}${tab==='benefits' ? benTop() : tab==='gifts' ? giftTop() : ''}<div class="empty">${tab==='gifts' ? 'No gift cards yet. Tap + Add for a gift card, voucher or store balance you were given.' : tab==='benefits' ? 'No benefits yet. Tap + Add to note a voucher, OTT, spa, gym or any perk your cards give you – and tick it off when you use it.' : 'Nothing here yet. Use + Add, or Cards → Quick add.'}</div></div>`;
@@ -3285,7 +3501,68 @@ async function scheduleNotifs(){
   }catch(e){}
 }
 async function testNotif(){ const LN = CP('LocalNotifications'); if(!LN) return; try{ let perm = await LN.requestPermissions(); if(perm.display!=='granted') return toast('Allow notifications for TrackMe in phone settings'); await LN.schedule({ notifications:[{ id:999, title:'TrackMe', body:'Notifications are working.', schedule:{ at:new Date(Date.now() + 3000), allowWhileIdle:true } }] }); toast('You will get a test in 3 seconds'); }catch(e){ toast('Could not send – check notification permission'); } }
+/* ---------- no pinch / double-tap zoom: the app keeps its own size ---------- */
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive:false });
+document.addEventListener('gesturechange', e => e.preventDefault(), { passive:false });
+document.addEventListener('touchmove', e => { if(e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
+document.addEventListener('wheel', e => { if(e.ctrlKey) e.preventDefault(); }, { passive:false });
+
+/* ---------- themed pickers: every dropdown and suggestion list opens the app's own sheet ---------- */
+const PK = { on:false, el:null, src:null, opts:[], q:'' };
+const PK_ARROW = '<svg class="pka" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+function pkTitle(el){ const lab = el.closest('label'); if(!lab) return el.getAttribute('aria-label') || el.dataset.title || 'Choose'; const c = lab.cloneNode(true); c.querySelectorAll('select,input,button,datalist,svg,.sub').forEach(x => x.remove()); return (c.textContent || '').trim().slice(0, 48) || 'Choose'; }
+function pkOptsOf(el){
+  if(el.tagName==='SELECT'){ const out = []; [...el.children].forEach(ch => { if(ch.tagName==='OPTGROUP') [...ch.children].forEach(o => out.push({ v:o.value, l:o.textContent, g:ch.label, d:o.disabled })); else if(ch.tagName==='OPTION') out.push({ v:ch.value, l:ch.textContent, g:'', d:ch.disabled }); }); return out; }
+  const dl = document.getElementById(el.dataset.list || ''); return dl ? [...dl.options].map(o => ({ v:o.value, l:o.label || o.value, g:'', d:false })) : [];
+}
+function pkEnhance(root){
+  (root || document).querySelectorAll('select:not([data-pk]):not([multiple]):not([size]), input[list]:not([data-pk]):not([data-free])').forEach(el => {
+    if(el.closest('#pk')) return;
+    const isSel = el.tagName==='SELECT', b = document.createElement('button'); b.type = 'button'; b.className = 'pk'; b.setAttribute('aria-haspopup', 'listbox');
+    el.dataset.pk = '1'; if(!isSel){ el.dataset.list = el.getAttribute('list'); el.removeAttribute('list'); }
+    el.classList.add('pk-native'); el.tabIndex = -1; el.setAttribute('aria-hidden', 'true'); el.parentNode.insertBefore(b, el);
+    b._for = el; el._pk = () => { const o = isSel ? el.options[el.selectedIndex] : null, t = isSel ? (o ? o.textContent : '') : el.value, ph = isSel ? (o && o.value==='' ) : !el.value, key = t + '|' + ph + '|' + el.disabled;
+      if(b.dataset.k === key) return; b.dataset.k = key; b.disabled = el.disabled; b.classList.toggle('ph', !!ph); b.innerHTML = `<span class="pkv">${esc(t || el.placeholder || 'Choose')}</span>${PK_ARROW}`; };
+    el._pk(); b.addEventListener('click', ev => { ev.preventDefault(); pkOpen(el); });
+  });
+}
+{ const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); Object.defineProperty(HTMLSelectElement.prototype, 'value', { get(){ return d.get.call(this); }, set(v){ d.set.call(this, v); if(this._pk) this._pk(); }, configurable:true }); }
+function pkBuild(){
+  if(PK.el) return; const el = document.createElement('div'); el.id = 'pk'; el.className = 'pk-bg'; el.setAttribute('role', 'dialog');
+  el.innerHTML = '<div class="pk-sheet"><div class="pk-h"><b id="pk_t"></b><button type="button" class="pk-x" aria-label="Close">×</button></div><div class="pk-sw"><input id="pk_s" type="search" placeholder="Search or type" autocomplete="off" autocapitalize="off"></div><div class="pk-l" id="pk_l" role="listbox"></div></div>';
+  document.body.appendChild(el); PK.el = el;
+  el.addEventListener('click', e => { if(e.target===el || e.target.closest('.pk-x')) pkClose(); const o = e.target.closest('.pk-o'); if(o && !o.disabled) pkPick(o.dataset.v); });
+  $('pk_s').addEventListener('input', () => { PK.q = $('pk_s').value; pkList(); });
+  $('pk_s').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); const f = $('pk_l').querySelector('.pk-o:not([disabled])'); if(f) pkPick(f.dataset.v); } });
+  document.addEventListener('keydown', e => { if(e.key==='Escape' && PK.on) pkClose(); });
+}
+function pkList(){
+  const el = PK.src, q = PK.q.trim().toLowerCase(), cur = el.value, free = el.tagName!=='SELECT';
+  const L = PK.opts.filter(o => !q || o.l.toLowerCase().includes(q) || o.v.toLowerCase().includes(q)); let g = null, h = '';
+  L.forEach(o => { if(o.g && o.g!==g){ g = o.g; h += `<div class="pk-g">${esc(g)}</div>`; } h += `<button type="button" class="pk-o ${o.v===cur ? 'sel' : ''}" data-v="${esc(o.v)}" role="option" aria-selected="${o.v===cur}" ${o.d ? 'disabled' : ''}><span>${esc(o.l)}</span>${o.v===cur ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>' : ''}</button>`; });
+  if(free && PK.q.trim() && !PK.opts.some(o => o.v.toLowerCase()===q)) h = `<button type="button" class="pk-o" data-v="${esc(PK.q.trim())}"><span>Use “${esc(PK.q.trim())}”</span></button>` + h;
+  $('pk_l').innerHTML = h || '<div class="pk-e">Nothing matches.</div>';
+}
+function pkOpen(el){
+  if(el.disabled) return; pkBuild(); PK.src = el; PK.opts = pkOptsOf(el); PK.q = ''; $('pk_t').textContent = pkTitle(el); const s = $('pk_s'); s.value = '';
+  s.parentNode.style.display = (el.tagName!=='SELECT' || PK.opts.length > 7) ? '' : 'none'; s.placeholder = el.tagName==='SELECT' ? 'Search' : 'Search or type your own';
+  pkList(); PK.on = true; PK.el.classList.add('on'); document.body.classList.add('pk-open'); haptic(3);
+  const sel = $('pk_l').querySelector('.sel'); if(sel) requestAnimationFrame(() => sel.scrollIntoView({ block:'center' }));
+}
+function pkClose(){ if(!PK.on) return; PK.on = false; PK.el.classList.remove('on'); document.body.classList.remove('pk-open'); const b = PK.src && PK.src.previousElementSibling; if(b && b.classList.contains('pk')) try{ b.focus({ preventScroll:true }); }catch(e){} }
+function pkPick(v){
+  const el = PK.src; if(!el) return; haptic(4);
+  if(el.tagName==='SELECT'){ const changed = el.value !== v; el.value = v; if(changed) el.dispatchEvent(new Event('change', { bubbles:true })); }
+  else { const changed = el.value !== v; el.value = v; if(el._pk) el._pk(); if(changed){ el.dispatchEvent(new Event('input', { bubbles:true })); el.dispatchEvent(new Event('change', { bubbles:true })); } }
+  pkClose();
+}
+{ let q = 0; const run = () => { q = 0; pkEnhance(document); document.querySelectorAll('[data-pk]').forEach(x => x._pk && x._pk()); };
+  const mo = new MutationObserver(() => { if(!q) q = requestAnimationFrame(run); });
+  const start = () => { ['app', 'modalBox', 'ask', 'calc'].forEach(id => { const n = document.getElementById(id); if(n) mo.observe(n, { childList:true, subtree:true, characterData:true }); }); run(); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start(); }
+if(NATIVE && CP('LocalNotifications')) CP('LocalNotifications').addListener('localNotificationActionPerformed', e => { const tid = e && e.notification && e.notification.extra && e.notification.extra.tid; if(!tid) return; V.pendArr = { tid, later: e.actionId==='later' }; render(); });
 if(NATIVE && CP('App')) CP('App').addListener('backButton', () => {
+  if(PK.on) return pkClose();
   if($('calc').classList.contains('on')) return calcClose();
   if($('ask').classList.contains('on')) return askNo();
   if($('modal').classList.contains('on')) return closeModal();

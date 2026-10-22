@@ -160,6 +160,47 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
 - Debit / unblock day, and the next working day if not confirmed.
 - Listing day at 7, 8 and 9 am: "Listing at 10:00. Check Groww to trade or keep."
 
+## Add flow (first-run guide and **+ Add** in the app)
+1. One guide with **seven boxed steps**, opened one at a time: 1 UPI apps, 2 Bank accounts,
+   3 Cards (Debit / Credit tabs, virtual cards included), 4 Wallets, 5 Cash, 6 Investments, 7 Others.
+   - Everything starts **unticked**. Tick an item to open its few fields; **Done – next** opens the
+     next box. A badge shows how many you are adding or already have. The **?** on a box explains it.
+   - The same guide opens from **+ Add** (Home wallet, Accounts page); items already added show as
+     ✓ and are not offered again. Edit an existing one with its own **Edit** button.
+2. **Banks**: balance, optional limits, then **Linked UPI apps** (all unticked) and
+   **+ Add custom UPI app**, which adds the app to every bank's list and gives it its own card.
+   The UPI cards show which banks each app is linked to.
+3. **Cards**: debit cards pick the bank they spend from; credit cards take limit, available amount,
+   statement day and due day. Virtual cards use the same forms (tick “Virtual card”).
+4. **Wallets** show whether they live inside a UPI app or are separate (like Mobikwik).
+5. **Cash boxes**: Personal, Office, Family or your own. Each has **Include in my net worth**
+   (on for Personal, off for the others). Boxes that are off are left out of the totals and
+   shown separately on the net worth page. Change it later: account → Edit.
+6. **Investments**: platform balance (private); FD/RD for Stable Money; holdings are added on the
+   platform card afterwards.
+7. **Others**: anything else, plus PayPal and gift cards (in-app only).
+8. What you type in the first-run guide survives switching apps and closing the app.
+9. Payment-method form: friendly kind names (UPI app, Debit card, Credit card, Wallet, Cash), the
+   “pays from” list no longer offers “Family / others”, and editing a wallet no longer turns it
+   into a UPI method.
+
+## Themed dropdowns
+- Every dropdown and suggestion list opens a sheet in the app's own colours (readable, large tap
+  targets, search when long, ✓ on the current choice) instead of the black Android picker.
+- Lists such as UPI apps accept your own entry (**Use “…”**). Back button, Esc and tapping outside close it.
+
+## No zoom
+- Pinch-zoom and double-tap zoom are switched off (page, browser and Android WebView), so the app
+  keeps its own size.
+
+## Tips and guides
+- First-time tip boxes on Accounts and IPOs (**Got it** or **Turn tips off**), a **?** on the
+  wallet, Accounts and IPO headers, and a **Tips and guides** switch in Settings to turn all of
+  them off or show them again.
+
+## Home stack view
+- The last stacked card no longer overlaps the Online money / Cash in hand tiles.
+
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
 - A daily snapshot builds the "over time" chart.

@@ -99,6 +99,12 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(SecureScreenPlugin.class);
         super.onCreate(savedInstanceState);
+        try {
+            android.webkit.WebSettings ws = getBridge().getWebView().getSettings();
+            ws.setSupportZoom(false);
+            ws.setBuiltInZoomControls(false);
+            ws.setDisplayZoomControls(false);
+        } catch (Exception e) { }
     }
 }
 """.replace('APPID', appid))
