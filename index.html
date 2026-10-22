@@ -2748,29 +2748,36 @@ function loSave(){
     else S.txns.push({ id:uid(), ts:ts + i, type:'transfer', amount:a, desc:`IPO leftover – ${o.name}`, cat:'Other', from:src, to:r.d }); });
   o.back = (o.back || 0) + sum; save(); closeModal(); haptic([8,30,12]); render(); toast(`${inr(sum)} placed`);
 }
-/* fix where an IPO's money was blocked: always a bank. Can also record the move from Groww that paid for it, and a missing debit */
+/* fix where an IPO's money was blocked: always a bank. The money can already be in the bank, come from Groww or another investment, or be borrowed */
 function ipoFromModal(id){
   const o = (S.ipos || []).find(x => x.id===id); if(!o) return; const cur = acc(o.from), banks = S.accounts.filter(x => ['bank','wallet'].includes(x.type) && !x.inactive);
-  const src = cur && cur.type==='invest' ? cur : (acc(o.plat) || acc(growwId())), need = o.amount || ipoNeed(o), debit = S.txns.find(t => t.type==='invest' && t.ipoId===o.id && !t.reverted), def = cur && cur.type!=='invest' ? cur.id : ((src && src.raa && src.raa.bank) || (banks.find(b => (b.brand || guessBrand(b.name))==='canara') || banks[0] || {}).id);
+  const src = cur && cur.type==='invest' ? cur : (acc(o.plat) || acc(growwId())), need = o.amount || ipoNeed(o), debit = S.txns.find(t => t.type==='invest' && t.ipoId===o.id && !t.reverted);
+  const def = cur && cur.type!=='invest' ? cur.id : ((src && src.raa && src.raa.bank) || (banks.find(b => (b.brand || guessBrand(b.name))==='canara') || banks[0] || {}).id), mode0 = cur && cur.type==='invest' ? 'inv' : 'none';
   if(!banks.length) return toast('Add your bank first');
   openModal(`${esc(o.name)} – which bank?`, `<div class="sub">The UPI mandate blocks the money in a <b>bank</b>. On the result, the allotted amount is debited from that bank (it becomes shares in ${esc(acc(o.plat)?.name || 'your investments')}) and the rest is released back to the same bank.</div>
-    <label class="f">Money was blocked in<select id="if_b" onchange="ifUI()">${banks.map(b => `<option value="${b.id}" ${b.id===def ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select></label>
-    ${src ? `<label class="ck"><input type="checkbox" id="if_mv" ${cur && cur.type==='invest' ? 'checked' : ''} onchange="ifUI()"><span>I withdrew money from ${esc(src.name)} to this bank for it</span></label>
-    <div id="if_mvf" class="row"><label class="f">Amount withdrawn (₹)<input id="if_a" type="number" inputmode="decimal" value="${need}" oninput="ifUI()"></label><label class="f">Date<input id="if_d" type="date" value="${o.applied || o.open || ISO(new Date())}"></label></div>` : ''}
+    <label class="f">Money is blocked in<select id="if_b" onchange="ifUI()">${banks.map(b => `<option value="${b.id}" ${b.id===def ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select></label>
+    <label class="f">Where did the money come from?<select id="if_m" onchange="ifUI()"><option value="none" ${mode0==='none' ? 'selected' : ''}>Already in this bank – nothing to move</option>${src ? `<option value="inv" ${mode0==='inv' ? 'selected' : ''}>Withdrawn from ${esc(src.name)} to this bank</option>` : ''}<option value="lend">Borrowed from a person</option></select></label>
+    <div id="if_mvf" class="row"><label class="f">Amount (₹)<input id="if_a" type="number" inputmode="decimal" value="${need}" oninput="ifUI()"></label><label class="f">Date<input id="if_d" type="date" value="${o.applied || o.open || ISO(new Date())}"></label></div>
+    <label class="f" id="if_pf">Who lent it?<input id="if_p" placeholder="Name" oninput="ifUI()"></label>
     ${o.status==='allotted' && !debit ? `<label class="ck"><input type="checkbox" id="if_db" checked onchange="ifUI()"><span>Record the ${inr(o.allotted || 0)} debit from this bank again (it is missing)</span></label>` : ''}
     <div class="card" id="if_sum" style="padding:12px 14px;gap:4px"></div>
     <div class="row"><button class="pri" onclick="ifSave('${id}')">Save</button><button class="ghost" onclick="closeModal()">Cancel</button></div>`);
   V.ifo = { id, src:src && src.id }; ifUI();
 }
-function ifPlan(){ const o = (S.ipos || []).find(x => x.id===V.ifo.id), b = mv('if_b'), mvOn = $('if_mv') && $('if_mv').checked, amt = mvOn ? parseFloat(mv('if_a')) || 0 : 0, db = $('if_db') && $('if_db').checked ? (o.allotted || 0) : 0, debit = S.txns.find(t => t.type==='invest' && t.ipoId===o.id && !t.reverted), moveDebit = debit && debit.from!==b ? debit.amount : 0, hold = ['pending','result'].includes(o.status) ? (o.amount || ipoNeed(o)) : 0;
-  return { o, b, amt, db, debit, moveDebit, hold, src:V.ifo.src }; }
-function ifUI(){ const P = ifPlan(), f = $('if_mvf'); if(f) f.style.display = $('if_mv') && $('if_mv').checked ? '' : 'none';
-  const bAfter = net(P.b) + P.amt - P.db - P.moveDebit, sAfter = P.src ? net(P.src) - P.amt : 0;
-  $('if_sum').innerHTML = `${P.src && P.amt ? `<div class="item" style="padding:3px 0"><span>${esc(acc(P.src).name)} balance after</span><b>${inr(sAfter)}</b></div>` : ''}<div class="item" style="padding:3px 0"><span>${esc(acc(P.b)?.name || '?')} balance after</span><b class="${bAfter < 0 ? 'neg' : ''}">${inr(bAfter)}</b></div>${P.hold ? `<div class="sub">${inr(P.hold)} stays on hold in ${esc(acc(P.b)?.name || '?')} until the result.</div>` : ''}${bAfter < 0 ? '<div class="sub neg">This would go below zero. Did the money reach this bank first? Tick the withdrawal above, or check the amount.</div>' : ''}<div class="sub">Afterwards compare with your bank and Groww apps; <b>Balance</b> on a card fixes any small difference.</div>`; }
+function ifPlan(){ const o = (S.ipos || []).find(x => x.id===V.ifo.id), b = mv('if_b'), mode = mv('if_m') || 'none', amt = mode==='none' ? 0 : (parseFloat(mv('if_a')) || 0), person = mode==='lend' ? (mv('if_p') || '').trim() : '', db = $('if_db') && $('if_db').checked ? (o.allotted || 0) : 0, debit = S.txns.find(t => t.type==='invest' && t.ipoId===o.id && !t.reverted), moveDebit = debit && debit.from!==b ? debit.amount : 0, hold = ['pending','result'].includes(o.status) ? (o.amount || ipoNeed(o)) : 0;
+  return { o, b, mode, amt, person, db, debit, moveDebit, hold, src:V.ifo.src }; }
+function ifUI(){ const P = ifPlan(), on = P.mode!=='none';
+  $('if_mvf').style.display = on ? '' : 'none'; $('if_pf').style.display = P.mode==='lend' ? '' : 'none';
+  const bAfter = net(P.b) + P.amt - P.db - P.moveDebit, sAfter = P.mode==='inv' && P.src ? net(P.src) - P.amt : null;
+  $('if_sum').innerHTML = `${sAfter !== null && P.amt ? `<div class="item" style="padding:3px 0"><span>${esc(acc(P.src).name)} balance after</span><b>${inr(sAfter)}</b></div>` : ''}<div class="item" style="padding:3px 0"><span>${esc(acc(P.b)?.name || '?')} balance after</span><b class="${bAfter < 0 ? 'neg' : ''}">${inr(bAfter)}</b></div>${P.hold ? `<div class="sub">${inr(P.hold)} stays on hold in ${esc(acc(P.b)?.name || '?')} until the result.</div>` : ''}${bAfter < 0 ? '<div class="sub neg">This would go below zero. Check the amount, or pick where the money came from.</div>' : ''}<div class="sub">Afterwards compare with your bank and Groww apps; <b>Balance</b> on a card fixes any small difference.</div>`; }
 function ifSave(id){
-  const P = ifPlan(), o = P.o; if(!P.b) return toast('Pick the bank'); if($('if_mv') && $('if_mv').checked && !(P.amt > 0)) return toast('Enter the amount withdrawn');
-  const ts = tsFrom(mv('if_d') || ISO(new Date()));
-  if(P.amt > 0) S.txns.push({ id:uid(), ts, type:'transfer', amount:P.amt, desc:`Withdrawn from ${acc(P.src).name} for IPO ${o.name}`, cat:'Other', from:P.src, to:P.b, ipoFund:o.id });
+  const P = ifPlan(), o = P.o; if(!P.b) return toast('Pick the bank');
+  if(P.mode!=='none' && !(P.amt > 0)) return toast('Enter the amount');
+  if(P.mode==='lend' && !P.person) return toast('Who lent it?');
+  const ts = tsFrom($('if_d') ? mv('if_d') : ISO(new Date()));
+  if(P.mode==='inv'){ const t = { id:uid(), ts, type:'transfer', amount:P.amt, desc:`Withdrawn from ${acc(P.src).name} for IPO ${o.name}`, cat:'Other', from:P.src, to:P.b, ipoFund:o.id }; S.txns.push(t); o.funds = (o.funds || []).concat({ id:uid(), k:'wd', amt:P.amt, ts, src:P.src, txn:t.id }); }
+  if(P.mode==='lend'){ const t = { id:uid(), ts, type:'income', amount:P.amt, desc:`I borrowed – ${P.person} (IPO ${o.name})`, cat:'Family', to:P.b, ledger:true }; S.txns.push(t);
+    S.people.push({ id:uid(), person:P.person, act:'borrowed', amt:-P.amt, ts, txnId:t.id, note:'for IPO ' + o.name }); o.funds = (o.funds || []).concat({ id:uid(), k:'lend', amt:P.amt, ts, person:P.person, txn:t.id }); }
   const h = S.txns.find(t => t.id===o.txn); if(h) h.from = P.b;
   if(P.debit && P.debit.from!==P.b) P.debit.from = P.b;
   if(P.db > 0){ const plat = acc(o.plat); S.txns.push({ id:uid(), ts:o.settled || Date.now(), type:'invest', amount:P.db, desc:'IPO allotted: ' + o.name, cat:'Other', from:P.b, toName:(plat?.name || 'Shares') + ' (shares)', ipoId:o.id });

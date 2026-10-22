@@ -142,6 +142,11 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
     record a missing debit again. Balances after the change are shown before saving.
 11. Reverting an IPO's debit in History puts the IPO back to “confirm the debit” and takes its
     shares out of holdings; restoring it puts them back.
+12. **Where the IPO money came from** (Change bank): pick one of three:
+    - *Already in this bank* – nothing moves;
+    - *Withdrawn from Groww or another investment to this bank* – enter the amount and date;
+    - *Borrowed from a person* – enter their name and the amount; it is recorded in Lent & owed.
+    The chosen source is also listed under the IPO as a source for leftover money.
 
 ## Money on the way
 1. A withdrawal or sale that lands later: from (Groww, a bank or an investment), to (bank),
