@@ -148,6 +148,9 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
     - *Borrowed from a person* – enter their name and the amount; it is recorded in Lent & owed.
     The chosen source is also listed under the IPO as a source for leftover money.
 
+13. The bank pickers in the IPO form and in Change bank end with **+ Add another bank…**, which opens
+    the Add guide on the bank box, so a bank you have not set up yet can be added without leaving the flow.
+
 ## Money on the way
 1. A withdrawal or sale that lands later: from (Groww, a bank or an investment), to (bank),
    amount, charges, and **Standard**, **Instant** or **My own date**.
