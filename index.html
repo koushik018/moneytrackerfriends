@@ -477,6 +477,25 @@ body.pk-open { overflow:hidden; }
 .hq { width:24px; height:24px; padding:0 !important; border-radius:50%; font-size:.7rem !important; letter-spacing:0 !important; color:var(--muted); vertical-align:middle; }
 @media (prefers-reduced-motion:reduce){ .sw-body, .tip { animation:none; } }
 @media (max-width:380px){ #modal .box > .row:last-child { gap:8px; flex-wrap:nowrap; } #modal .box > .row:last-child button { padding:11px 10px; letter-spacing:.08em; flex:1 1 auto; min-width:0; } .bid .row > label.f { flex-basis:100%; } }
+.cc.front .top { flex:none; } .cc.front .bot { min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; } .cc.front .bot::-webkit-scrollbar, .cc.back .bkw::-webkit-scrollbar { display:none; }
+.cc .bot.more, .cc.back .bkw.more { -webkit-mask-image:linear-gradient(180deg,#000 70%,transparent); mask-image:linear-gradient(180deg,#000 70%,transparent); }
+.cc.back .bkw { overscroll-behavior:contain; }
+.flash { animation:flash 1.6s ease; } .cw.flash .cc.front { animation:flash 1.6s ease; } @keyframes flash { 0%,100% { box-shadow:none; } 20%,60% { box-shadow:0 0 0 3px var(--accent); } }
+/* ---- search ---- */
+.sr-bg { position:fixed; inset:0; z-index:165; background:rgba(0,0,0,.55); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); opacity:0; visibility:hidden; transition:opacity .2s ease, visibility 0s linear .22s; }
+.sr-bg.on { opacity:1; visibility:visible; transition:opacity .2s ease; }
+.sr-box { position:absolute; inset:0; background:var(--solid); display:flex; flex-direction:column; transform:translateY(-14px); transition:transform .24s cubic-bezier(.2,.8,.2,1); padding-top:env(safe-area-inset-top); max-width:680px; margin:0 auto; }
+.sr-bg.on .sr-box { transform:none; }
+.sr-h { display:flex; gap:8px; padding:14px 16px 10px; align-items:center; } .sr-h input { flex:1; font-size:1rem; }
+.sr-tabs { margin:0 16px 6px; flex:none; } .sr-tabs button { padding:10px 4px; }
+.sr-l { overflow-y:auto; padding:0 12px calc(24px + env(safe-area-inset-bottom)); flex:1; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+.sr-g { font-size:.6rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); padding:16px 6px 6px; display:flex; justify-content:space-between; align-items:center; }
+button.sr-it { display:flex; width:100%; justify-content:space-between; gap:12px; text-align:left; text-transform:none; letter-spacing:0; font-size:.95rem; font-weight:300; padding:12px 8px; border:none; border-bottom:1px solid var(--border); border-radius:0; color:var(--text); background:transparent; min-height:54px; align-items:center; }
+button.sr-it:hover, button.sr-it:active { background:rgba(255,255,255,.04); color:var(--text); }
+button.sr-it .l { display:flex; flex-direction:column; min-width:0; gap:2px; } button.sr-it .l b { font-weight:400; overflow-wrap:anywhere; } button.sr-it .r { white-space:nowrap; font-variant-numeric:tabular-nums; } button.sr-it.rev { opacity:.5; }
+mark.sr-m { background:color-mix(in srgb,var(--accent) 38%,transparent); color:inherit; border-radius:2px; padding:0 1px; }
+.sr-e { color:var(--muted); text-align:center; padding:28px 16px; font-size:.9rem; line-height:1.6; }
+@media (prefers-reduced-motion:reduce){ .sr-bg, .sr-box { transition:none; } .flash, .cw.flash .cc.front { animation:none; } }
 .boxes { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px; }
 .bx { display:flex; flex-direction:column; gap:2px; border:1px solid var(--border); padding:8px 10px; background:var(--input); } .bx span { font-size:.6rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); } .bx input { border:none; background:transparent; padding:4px 0; font-family:'Playfair Display',serif; font-size:1.1rem; }
 .bx:focus-within { border-color:var(--accent); }
@@ -852,10 +871,10 @@ function render(){
   if(!(V.tab==='plan' && (V.pt||'fixed')==='people')){ V.peopleOk = false; V.adj = false; }
   if(V.tab!=='home' || (V.wtab||'all')!=='invest') V.invOk = false;
   document.body.classList.toggle('stackmode', !!V.stack && V.tab==='home');
-  if(S.lock && !V.unlocked){ $('app').innerHTML = ''; return; }
+  if(S.lock && !V.unlocked){ $('app').innerHTML = ''; srClose(); return; }
   $('title').innerHTML = `<span class="script">${esc(S.userName || 'TrackMe')}</span><small>Private ledger</small>`;
   tick();
-  $('hdrBtns').innerHTML = `<button class="sm ico" onclick="toggleHide()" title="Show / hide amounts">${eye(!V.hideNow)}</button>${S.lock ? `<button class="sm ico" onclick="lockNow()" title="Lock">${svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>').replace('<svg','<svg class="ic"')}</button>` : ''}<button class="sm ico" onclick="go('notifs')" title="Notifications" aria-label="Notifications">${svg('<path d="M6 17h12l-1.5-2v-4a4.5 4.5 0 00-9 0v4z"/><path d="M10 20a2 2 0 004 0"/>').replace('<svg','<svg class="ic"')}</button><button class="sm ico" onclick="go('settings')" title="Profile & settings" aria-label="Profile and settings">${svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4.2 4.4-6 8-6s6.8 1.8 8 6"/>').replace('<svg','<svg class="ic"')}</button>`;
+  $('hdrBtns').innerHTML = `<button class="sm ico" onclick="srOpen()" title="Search" aria-label="Search">${svg('<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>').replace('<svg','<svg class="ic"')}</button><button class="sm ico" onclick="toggleHide()" title="Show / hide amounts">${eye(!V.hideNow)}</button>${S.lock ? `<button class="sm ico" onclick="lockNow()" title="Lock">${svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>').replace('<svg','<svg class="ic"')}</button>` : ''}<button class="sm ico" onclick="go('notifs')" title="Notifications" aria-label="Notifications">${svg('<path d="M6 17h12l-1.5-2v-4a4.5 4.5 0 00-9 0v4z"/><path d="M10 20a2 2 0 004 0"/>').replace('<svg','<svg class="ic"')}</button><button class="sm ico" onclick="go('settings')" title="Profile & settings" aria-label="Profile and settings">${svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4.2 4.4-6 8-6s6.8 1.8 8 6"/>').replace('<svg','<svg class="ic"')}</button>`;
   document.body.classList.toggle('plainbg', S.bg==='plain');
   $('tabs').innerHTML = '<div class="in">' + TABS.map(([k,i,l]) => `<button class="${V.tab===k?'on':''}" onclick="go('${k}')">${i}${l}</button>`).join('') + '</div>';
   try{ $('app').innerHTML = desktopHint() + ({home:rHome, add:rAdd, history:rHistory, accounts:rAccounts, plan:rPlan, insights:rInsights, settings:rSettings, vault:rVault, notifs:rNotifs, sec:rSec, details:rDetails})[V.tab](); }
@@ -866,7 +885,7 @@ function render(){
   }
   if(V.tab==='home' && needsSetup()) restoreDraft();
   if(V.tab==='add') refreshSuggest();
-  if(V.tab==='home') wireWallet();
+  if(V.tab==='home'){ wireWallet(); requestAnimationFrame(cardFades); if(V.reflip){ const w = cwEl(V.reflip); V.reflip = null; if(w) w.classList.add('flip'); } }
   if(V.tab==='plan' && V.pt==='calc') calcUpdate();
   if(V.pendArr){ const p = V.pendArr; V.pendArr = null; setTimeout(() => p.later ? trLater(p.tid) : arriveModal(p.tid), 250); }
 }
@@ -1141,6 +1160,63 @@ function addPreset(p, bal, lim){
   return a;
 }
 
+/* ---------- search: cards, history and plans by name, word or ₹ amount – never investments or the private vault ---------- */
+const SR = { q:'', tab:'all', t:0 };
+const srHidden = a => !a || ['invest','vault','external'].includes(a.type) || !!a.reserve;
+function srOpen(){
+  if(S.lock && !V.unlocked) return; let el = $('sr');
+  if(!el){ el = document.createElement('div'); el.id = 'sr'; el.className = 'sr-bg'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Search');
+    el.innerHTML = '<div class="sr-box"><div class="sr-h"><input id="sr_q" type="search" placeholder="Search a name, word or ₹ amount" autocomplete="off" autocapitalize="off" enterkeyhint="search"><button class="sm ghost" type="button" onclick="srClose()">Close</button></div><div class="seg sr-tabs" id="sr_t"></div><div class="sr-l" id="sr_l"></div></div>';
+    document.body.appendChild(el); $('sr_q').addEventListener('input', () => { SR.q = $('sr_q').value; clearTimeout(SR.t); SR.t = setTimeout(srRun, 110); });
+    el.addEventListener('click', e => { if(e.target===el) srClose(); }); }
+  SR.tab = 'all'; $('sr_q').value = SR.q; el.classList.add('on'); document.body.classList.add('pk-open'); srRun(); setTimeout(() => $('sr_q').focus(), 80); haptic(4);
+}
+function srClose(){ const el = $('sr'); if(el && el.classList.contains('on')){ el.classList.remove('on'); document.body.classList.remove('pk-open'); } }
+function srFind(q){
+  const t = q.trim().toLowerCase(); if(!t) return null;
+  const digits = t.replace(/[₹,\s]/g, ''), isNum = /^\d+(\.\d+)?$/.test(digits), num = isNum ? parseFloat(digits) : NaN;
+  const has = x => !!x && String(x).toLowerCase().includes(t);
+  const amt = v => isNum && v != null && !isNaN(v) && (Math.abs(Math.abs(v) - num) < .5 || (digits.length >= 3 && String(Math.round(Math.abs(v))).includes(digits.split('.')[0])));
+  const exact = v => isNum && v != null && Math.abs(Math.abs(v) - num) < .5;
+  const R = { cards:[], history:[], plans:[] }, peopleOk = !(S.lockPeople && S.lock && !V.peopleOk);
+  S.accounts.filter(a => !srHidden(a)).forEach(a => { const bal = a.type==='credit' ? avail(a) : net(a.id);
+    if(has(a.name) || has(TYPES[a.type]) || has(a.note) || amt(bal)) R.cards.push({ t:a.name, s:TYPES[a.type] + (a.inactive ? ' · not in use' : ''), r:mi(bal, a) + (a.type==='credit' ? ' free' : ''), go:`srGoCard('acc:${a.id}','${a.type==='credit' ? 'cards' : a.type==='wallet' ? 'wallets' : 'banks'}')`, w:has(a.name) ? 3 : 1 }); });
+  S.methods.filter(m => m.kind==='debit' && acc(m.accountId) && !srHidden(acc(m.accountId))).forEach(m => { if(has(m.name) || has(acc(m.accountId).name)) R.cards.push({ t:m.name, s:'Debit card · ' + acc(m.accountId).name, r:'', go:`srGoCard('card:${m.id}','cards')`, w:has(m.name) ? 2 : 1 }); });
+  [...new Set(S.methods.filter(m => m.app && m.kind==='upi').map(m => m.app).concat(S.apps || []))].forEach(app => { const bs = S.methods.filter(m => m.app===app && acc(m.accountId) && !srHidden(acc(m.accountId))).map(m => acc(m.accountId).name);
+    if(has(app) || bs.some(has)) R.cards.push({ t:app, s:'UPI app' + (bs.length ? ' · ' + bs.join(', ') : ''), r:'', go:`srGoCard('upi:${qs(app)}','upi')`, w:has(app) ? 2 : 1 }); });
+  giftList().forEach(g => { if(has(g.name) || has(g.where) || amt(giftBal(g))) R.cards.push({ t:g.name, s:'Gift card' + (g.where ? ' · ' + g.where : ''), r:mi(giftBal(g)), go:`srGoCard('gift:${g.id}','gifts')`, w:1 }); });
+  benList().forEach(b => { const a = acc(b.accId); if(a && !srHidden(a) && has(b.name)) R.cards.push({ t:b.name, s:'Benefit · ' + a.name, r:'', go:`srGoCard('ben:${b.accId}','benefits')`, w:1 }); });
+  S.txns.forEach(x => { if([x.from, x.to].some(id => id && srHidden(acc(id))) || x.type==='hold' || x.type==='invest') return;
+    const m = meth(x.methodId), fromN = anm(x.from) || x.fromName || '', toN = anm(x.to) || x.toName || '';
+    if([x.desc, x.cat, x.vendor, x.app, m && m.name, m && m.app, fromN, toN].some(has) || amt(x.amount))
+      R.history.push({ t:x.desc || x.cat || 'Entry', s:fdt(x.ts) + ' · ' + [fromN, toN].filter(Boolean).join(' → '), r:mi(x.amount), ts:x.ts, go:`srGoTx('${x.id}')`, rev:!!x.reverted, w:exact(x.amount) ? 3 : 1 }); });
+  R.history.sort((a, b) => (b.w - a.w) || (b.ts - a.ts));
+  evList().forEach(e => { if(has(e.title) || has(e.note) || has(e.cat) || amt(e.amount)) R.plans.push({ t:e.title, s:'Upcoming · ' + (e.date ? fdate(new Date(e.date + 'T00:00:00')) : '') + (e.done ? ' · done' : ''), r:e.amount ? mi(e.amount) : '', go:`srGoPlan('events','ev_${e.id}')`, w:1 }); });
+  S.fixed.forEach(f => { if(has(f.title) || has(f.cat) || amt(f.amount)) R.plans.push({ t:f.title, s:(f.emi ? 'EMI' : f.auto ? 'Autopay' : 'Fixed cost') + (f.off ? ' · stopped' : ''), r:mi(f.amount), go:`srGoPlan('${f.emi ? 'emi' : 'fixed'}','fx_${f.id}')`, w:1 }); });
+  S.reminders.forEach(r => { const v = r.amount || r.autoAmt; if(has(r.title) || amt(v)) R.plans.push({ t:r.title, s:'Monthly reminder · day ' + r.day, r:v ? mi(v) : '', go:`srClose();remModal('${r.id}')`, w:1 }); });
+  if(peopleOk) Object.entries(pplBal()).forEach(([n, v]) => { if(has(n) || amt(v)) R.plans.push({ t:n, s:'Lent & owed · ' + (v > .004 ? 'owes you' : v < -.004 ? 'you owe' : 'settled'), r:Math.abs(v) > .004 ? mi(Math.abs(v)) : '', go:`srGoPeople('${qs(n)}')`, w:2 }); });
+  ['cards', 'plans'].forEach(k => R[k].sort((a, b) => b.w - a.w));
+  return R;
+}
+function srMark(x){ const q = SR.q.trim(); let h = esc(x || ''); if(!q) return h; const i = String(x || '').toLowerCase().indexOf(q.toLowerCase()); if(i < 0) return h; const raw = String(x); return esc(raw.slice(0, i)) + '<mark class="sr-m">' + esc(raw.slice(i, i + q.length)) + '</mark>' + esc(raw.slice(i + q.length)); }
+function srRun(){
+  const R = srFind(SR.q), tabs = $('sr_t'), list = $('sr_l'); if(!tabs || !list) return;
+  if(!R){ tabs.innerHTML = ''; list.innerHTML = `<div class="sr-e">Search your cards, history and plans.<br>Try a name like <b>Canara</b>, a word like <b>rent</b>, or an amount like <b>500</b>.<br><span class="sub">Investments and the private vault are never searched.</span></div>`; return; }
+  const N = { cards:R.cards.length, history:R.history.length, plans:R.plans.length }, all = N.cards + N.history + N.plans, L = { all:'All', cards:'Cards', history:'History', plans:'Plans' };
+  if(SR.tab!=='all' && !N[SR.tab]) SR.tab = 'all';
+  tabs.innerHTML = Object.keys(L).map(k => `<button type="button" class="${SR.tab===k ? 'on' : ''}" onclick="SR.tab='${k}';srRun()">${L[k]} ${k==='all' ? all : N[k]}</button>`).join('');
+  const row = x => `<button type="button" class="sr-it ${x.rev ? 'rev' : ''}" onclick="${x.go}"><span class="l"><b>${srMark(x.t)}</b><span class="sub">${srMark(x.s)}</span></span><span class="r">${x.r || ''}</span></button>`;
+  const NM = { cards:'Cards and accounts', history:'History', plans:'Plans, reminders and people' };
+  if(!all){ list.innerHTML = `<div class="sr-e">Nothing found for “${esc(SR.q.trim())}”.</div>`; return; }
+  list.innerHTML = SR.tab==='all'
+    ? ['cards', 'history', 'plans'].filter(k => N[k]).map(k => `<div class="sr-g"><span>${NM[k]} · ${N[k]}</span>${N[k] > 4 ? `<button type="button" class="sm ghost" onclick="SR.tab='${k}';srRun();$('sr_l').scrollTop=0">See all</button>` : ''}</div>${R[k].slice(0, 4).map(row).join('')}`).join('')
+    : `<div class="sr-g"><span>${NM[SR.tab]} · ${N[SR.tab]}</span></div>${R[SR.tab].slice(0, 300).map(row).join('')}${N[SR.tab] > 300 ? '<div class="sr-e">Showing the first 300 – add a word to narrow it.</div>' : ''}`;
+}
+function srFlash(sel){ setTimeout(() => { const e = document.querySelector(sel); if(!e) return; e.scrollIntoView({ block:'center', behavior:'smooth' }); e.classList.remove('flash'); void e.offsetWidth; e.classList.add('flash'); setTimeout(() => e.classList.remove('flash'), 1700); }, 160); }
+function srGoCard(key, tab){ srClose(); V.tab = 'home'; V.wtab = tab; V.focus = key; render(); haptic(5); srFlash(`.cw[data-key="${CSS.escape(key)}"]`); }
+function srGoTx(id){ const t = S.txns.find(x => x.id===id); if(!t) return; srClose(); V.month = ym(t.ts); V.ftype = 'all'; V.hacc = V.hmeth = V.happ = null; V.q = ''; go('history'); srFlash('#tx_' + id); }
+function srGoPlan(pt, elId){ srClose(); V.tab = 'plan'; V.pt = pt; render(); srFlash('#' + elId); }
+function srGoPeople(n){ srClose(); V.tab = 'plan'; V.pt = 'people'; render(); setTimeout(() => { const d = [...document.querySelectorAll('details[data-pp]')].find(x => x.dataset.pp===n); if(d){ d.open = true; d.id = 'pp_sr'; srFlash('#pp_sr'); } }, 60); }
 /* ---------- guides: first-time tips you can switch off, and a ? on each screen ---------- */
 const tipsOn = () => !(S.tips && S.tips.off);
 function tip(key, html){ if(!tipsOn() || (S.tips && S.tips.seen && S.tips.seen[key])) return ''; return `<div class="tip" data-tip="${key}"><div>${html}</div><div class="tip-a"><button class="sm" type="button" onclick="tipSeen('${key}')">Got it</button><button class="sm ghost" type="button" onclick="tipsSet(false)">Turn tips off</button></div></div>`; }
@@ -1321,7 +1397,7 @@ function histRows(L){
     const c = cls(t), m = meth(t.methodId);
     const accs = t.type==='expense' ? (m?.name || anm(t.from) || t.fromName || '') : t.type==='income' ? '→ ' + (anm(t.to)||'') : t.type==='adjust' ? (anm(t.to)||'') : t.type==='reward' ? (meth(t.methodId)?.name||'') : `${anm(t.from)||t.fromName||'?'} → ${anm(t.to)||t.toName||'?'}`;
     const sign = c==='expense' ? '-' : c==='income' ? '+' : '';
-    return `<div class="item ${t.reverted?'rev':''}"><div class="l"><div class="t">${CATS[t.cat]||''} ${esc(t.desc)}</div><div class="sub">${t.legacy ? fdate(t.ts) : fdt(t.ts)} · ${esc(accs)}${t.vendor ? ' · ' + esc(t.vendor) : ''}${t.app?' · '+esc(t.app):''}${t.mode?' · '+(MODES[t.mode]||''):''}</div>${t.cb?`<span class="chip g">+${inr(t.cb)} cashback</span> `:''}${t.legacy?'<span class="chip">imported</span> ':''}${t.reverted?'<span class="chip w">reverted</span>':''}</div>
+    return `<div class="item ${t.reverted?'rev':''}" id="tx_${t.id}"><div class="l"><div class="t">${CATS[t.cat]||''} ${esc(t.desc)}</div><div class="sub">${t.legacy ? fdate(t.ts) : fdt(t.ts)} · ${esc(accs)}${t.vendor ? ' · ' + esc(t.vendor) : ''}${t.app?' · '+esc(t.app):''}${t.mode?' · '+(MODES[t.mode]||''):''}</div>${t.cb?`<span class="chip g">+${inr(t.cb)} cashback</span> `:''}${t.legacy?'<span class="chip">imported</span> ':''}${t.reverted?'<span class="chip w">reverted</span>':''}</div>
       <div class="r"><div class="${c==='expense'?'neg':c==='income'?'pos':''}">${sign}${mi(Math.abs(t.amount))}${t.type==='adjust'?(t.amount<0?'':'') :''}</div>
       <div>${t.reverted?`<button class="sm good" onclick="revert('${t.id}')">Restore</button> <button class="sm bad" onclick="delTx('${t.id}')">Delete</button>`:`${t.type==='expense'?`<button class="sm ghost" onclick="cbModal('${t.id}')">Cashback</button> `:''}<button class="sm" onclick="revertAsk('${t.id}')">Revert</button>`}</div></div></div>`;
   }).join('');
@@ -1579,7 +1655,8 @@ function estMissed(m){
 
 /* ---------- settings ---------- */
 function rSettings(){
-  return `<div class="card"><h2>Security & privacy</h2><div class="sub">Your locks, details vault, screenshots, intruder log and encrypted backups in one place.</div><button class="pri" onclick="secOpen()">Open</button></div>`
+  return `<div class="card"><h2>Card & bank details</h2><div class="sub">Last 4 digits, expiry, IFSC, branch, UPI IDs and linked mobile – locked with your own passphrase. They also show on the back of each card while unlocked, with Copy. Never the full number, PIN or CVV.</div><button class="pri" onclick="dvEnsure(() => go('details'))">${S.dv ? 'Open details' : 'Set up details'}</button></div>
+  <div class="card"><h2>Security & privacy</h2><div class="sub">Your locks, details vault, screenshots, intruder log and encrypted backups in one place.</div><button class="pri" onclick="secOpen()">Open</button></div>`
   + `<div class="card"><h2>Security</h2><div class="sub">App PIN ${S.lock ? '✔' : '– not set'} · Fingerprint ${S.bio ? '✔' : '– off'} · Investments PIN ${S.invLock ? '✔' : '– uses app PIN'}</div>
     <div class="row">${S.lock ? `<button onclick="pinModal()">Change PIN</button>` : `<button class="pri" onclick="pinModal()">Set a PIN</button>`}${S.lock ? (S.bio ? `<button class="bad" onclick="disableBio()">Turn off fingerprint</button>` : `<button class="pri" onclick="enableBio()">Turn on fingerprint</button>`) : ''}<button onclick="invPinModal()">${S.invLock ? 'Change' : 'Set'} investments PIN</button></div>
     ${S.lock ? '' : '<div class="sub">Set a PIN first – fingerprint needs it as a backup.</div>'}</div>
@@ -2049,7 +2126,7 @@ function fxRow(f){
   const nx = fxNext(f), done = Object.keys(f.paid||{}).length, m = meth(f.methodId), t0 = new Date(); t0.setHours(0,0,0,0);
   const days = nx ? Math.round((nx - t0) / 864e5) : null;
   const when = nx ? (days<0 ? `Overdue ${-days}d` : days===0 ? 'Today' : `in ${days}d`) + ' · ' + fdate(nx) : (f.freq==='once' || f.emi ? 'Completed' : '—');
-  return `<div class="item ${f.off?'rev':''}"><div class="l" style="display:flex;gap:12px;align-items:center">${mark(f.emi?'emi':'recur',30)}<div style="min-width:0"><div class="t">${esc(f.title)} ${f.auto?'<span class="chip g">autopay</span>':''}</div>
+  return `<div class="item ${f.off?'rev':''}" id="fx_${f.id}"><div class="l" style="display:flex;gap:12px;align-items:center">${mark(f.emi?'emi':'recur',30)}<div style="min-width:0"><div class="t">${esc(f.title)} ${f.auto?'<span class="chip g">autopay</span>':''}</div>
     <div class="sub">${f.emi ? `${f.ppl ? 'Repayment' : 'EMI'} ${done} of ${f.emi.months} paid` : FREQ[f.freq]} · ${when}${m?' · '+esc(m.app||m.name):''}${fxTimes(f) ? ' · ' + mi(fxYear(f)) + ' a year' : ''}${Object.keys(FX_PER).some(x => !fxCounts(f, x)) ? ' · not in: ' + Object.keys(FX_PER).filter(x => !fxCounts(f, x)).map(x => FX_NAME[x].toLowerCase()).join(', ') : ''}</div>${f.emi?`<div class="bar" style="margin-top:6px"><i style="width:${done/f.emi.months*100}%"></i></div>`:''}</div></div>
     <div class="r"><div>${mi(nx ? fxAmt(f, ISO(nx)) : f.amount)}</div><div>${nx && !f.auto && !f.off ? `<button class="sm good" onclick="payFx('${f.id}','${ISO(nx)}')">Pay</button> <button class="sm ghost" onclick="skipFx('${f.id}','${ISO(nx)}')">Skip</button> ` : ''}<button class="sm" onclick="fxModal('${f.id}')">Edit</button></div></div></div>`;
 }
@@ -2151,7 +2228,7 @@ function rPeople(){
     <div class="sub">Money you gave or took from people. This is separate from your spending: it never counts as an expense, but you can choose to move it in or out of an account.</div>
     <div class="stats"><div class="stat"><span class="sub">People owe you</span><b class="pos">${mi(owed)}</b></div><div class="stat"><span class="sub">You owe</span><b class="neg">${mi(owe)}</b></div></div>
     <div class="list">${names.map(n => { const es = S.people.filter(e => e.person===n && pplLive(e)).sort((a,b) => b.ts - a.ts), rp = S.fixed.find(f => f.ppl===n && fxLive(f));
-      return `<details class="item" style="display:block"><summary style="display:flex;justify-content:space-between;align-items:center;list-style:none"><span class="t">${esc(n)}${rp ? ' <span class="chip g">monthly '+inr(rp.amount)+'</span>' : ''}</span><span class="${bal[n]>0?'pos':bal[n]<0?'neg':''}">${bal[n]>0 ? 'owes you ' + mi(bal[n]) : bal[n]<0 ? 'you owe ' + mi(-bal[n]) : 'settled'}</span></summary>
+      return `<details class="item" style="display:block" data-pp="${esc(n)}"><summary style="display:flex;justify-content:space-between;align-items:center;list-style:none"><span class="t">${esc(n)}${rp ? ' <span class="chip g">monthly '+inr(rp.amount)+'</span>' : ''}</span><span class="${bal[n]>0?'pos':bal[n]<0?'neg':''}">${bal[n]>0 ? 'owes you ' + mi(bal[n]) : bal[n]<0 ? 'you owe ' + mi(-bal[n]) : 'settled'}</span></summary>
       <div class="list" style="margin-top:10px">${es.map(e => `<div class="item"><div class="l"><div class="t">${PA[e.act][0]}</div><div class="sub">${fdt(e.ts)}${e.note?' · '+esc(e.note):''}</div></div><div class="r">${mi(Math.abs(e.amt))} <button class="sm ghost" onclick="delPpl('${e.id}')">×</button></div></div>`).join('')}${(() => { const sum = k => es.filter(e => e.act===k).reduce((x, e) => x + Math.abs(e.amt), 0), bo = sum('borrowed'), ip = sum('iPaid'), le = sum('lent'), tp = sum('theyPaid');
         return (bo ? `<div class="sub">Borrowed ${mi(bo)} · paid back ${mi(ip)} · <b>left to pay ${mi(Math.max(0, bo - ip))}</b></div>` : '') + (le ? `<div class="sub">Lent ${mi(le)} · got back ${mi(tp)} · <b>still to come ${mi(Math.max(0, le - tp))}</b></div>` : ''); })()}
       <div class="row" style="gap:8px">${bal[n] < -0.004 ? `<button class="sm good" onclick="pplSettle('${qs(n)}','iPaid')">Pay back ${mi(-bal[n])}</button>` : bal[n] > 0.004 ? `<button class="sm good" onclick="pplSettle('${qs(n)}','theyPaid')">They paid back ${mi(bal[n])}</button>` : ''}<button class="sm" onclick="pplModal('${qs(n)}')">+ Add / settle with ${esc(n)}</button></div></div></details>`; }).join('') || '<div class="empty">Nobody owes anything.</div>'}</div></div>`;
@@ -2254,7 +2331,7 @@ function rUpcoming(){
   const sum = (l, f) => l.filter(f).reduce((x, e) => x + (e.amount || 0), 0), d = e => evDays(e);
   const n30 = sum(open, e => d(e) >= 0 && d(e) <= 30), n90 = sum(open, e => d(e) >= 0 && d(e) <= 90), spend = nwData().spend;
   const row = e => { const dd = d(e), late = !e.done && dd < 0, lead = (e.lead || []).slice().sort((a, b) => b - a);
-    return `<div class="item ${e.done ? 'rev' : ''}"><div class="l"><div class="t">${CATS[e.cat] || ''} ${esc(e.title)}</div><div class="sub">${fdate(new Date(e.date + 'T00:00:00'))} · <b class="${late ? 'neg' : ''}">${evWhen(dd)}</b>${e.cat ? ' · ' + esc(e.cat) : ''}</div>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}<div class="sub">${lead.length ? 'Reminders: ' + lead.map(x => x===0 ? 'on the day' : x + ' day' + (x>1 ? 's' : '') + ' before').join(', ') : 'No reminders'}</div></div>
+    return `<div class="item ${e.done ? 'rev' : ''}" id="ev_${e.id}"><div class="l"><div class="t">${CATS[e.cat] || ''} ${esc(e.title)}</div><div class="sub">${fdate(new Date(e.date + 'T00:00:00'))} · <b class="${late ? 'neg' : ''}">${evWhen(dd)}</b>${e.cat ? ' · ' + esc(e.cat) : ''}</div>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}<div class="sub">${lead.length ? 'Reminders: ' + lead.map(x => x===0 ? 'on the day' : x + ' day' + (x>1 ? 's' : '') + ' before').join(', ') : 'No reminders'}</div></div>
       <div class="r"><div>${e.amount ? mi(e.amount) : ''}</div><div class="row" style="gap:6px;margin-top:4px"><button class="sm ${e.done ? '' : 'good'}" onclick="evDone('${e.id}')">${e.done ? 'Undo' : 'Done'}</button><button class="sm" onclick="evModal('${e.id}')">Edit</button></div></div></div>`; };
   return `<div class="card"><h2>Upcoming costs & events <button class="sm" onclick="evModal()">+ Add</button></h2><div class="sub">Note what is coming – a trip, a gift, a fee, a festival – with its cost, and choose how many days before you want a reminder.</div>
     <div class="stats"><div class="stat"><span class="sub">Next 30 days</span><b>${mi(n30)}</b></div><div class="stat"><span class="sub">Next 3 months</span><b>${mi(n90)}</b></div><div class="stat"><span class="sub">Free after 30 days</span><b class="${spend - n30 >= 0 ? 'pos' : 'neg'}">${mi(spend - n30)}</b></div></div>
@@ -3362,7 +3439,12 @@ function walletHTML(){
     : `<div class="pullhint"></div><div class="cards" id="cards">${items.map(i => i.html).join('')}</div><div id="wacts">${actsFor(V.focus)}</div>`;
   return `<div class="wallet">${head}${top}${body}${tab==='invest' ? ipoListHTML()  : ''}</div>`;
 }
-function refreshWallet(){ const s = $('walletSlot'); if(s){ s.innerHTML = walletHTML(); wireWallet(); } }
+function refreshWallet(){ const s = $('walletSlot'); if(s){ s.innerHTML = walletHTML(); wireWallet(); requestAnimationFrame(cardFades); } }
+/* a card whose text is longer than the card scrolls inside it; a soft fade shows there is more */
+function cardFadeOne(el){ el.classList.toggle('more', el.scrollHeight - el.clientHeight - el.scrollTop > 4); }
+function cardFades(){ document.querySelectorAll('.cc .bot, .cc.back .bkw').forEach(cardFadeOne); }
+document.addEventListener('scroll', e => { const el = e.target; if(el && el.classList && (el.classList.contains('bot') || el.classList.contains('bkw'))) cardFadeOne(el); }, true);
+
 function setWTab(t){
   const go2 = () => { if(V.wtab!==t) haptic(5); V.wtab = t; V.focus = null; refreshWallet(); };
   if(t==='invest' && !V.invOk) return ensureInvest(go2);
@@ -3699,6 +3781,7 @@ function pkPick(v){
 if(NATIVE && CP('LocalNotifications')) CP('LocalNotifications').addListener('localNotificationActionPerformed', e => { const tid = e && e.notification && e.notification.extra && e.notification.extra.tid; if(!tid) return; V.pendArr = { tid, later: e.actionId==='later' }; render(); });
 if(NATIVE && CP('App')) CP('App').addListener('backButton', () => {
   if(PK.on) return pkClose();
+  if($('sr') && $('sr').classList.contains('on')) return srClose();
   if($('calc').classList.contains('on')) return calcClose();
   if($('ask').classList.contains('on')) return askNo();
   if($('modal').classList.contains('on')) return closeModal();
@@ -3912,12 +3995,14 @@ const dvKey = (id, isM) => (isM ? 'm:' : 'a:') + id;
 /* last 4 digits, expiry, network, IFSC and branch on the back of a card – shown only while the details vault is unlocked, never stored in the clear */
 function dvBackHTML(key, kind){
   const title = kind==='card' ? 'Card details' : 'Bank details';
-  if(!S.dv) return `<div class="bk">${bl(title, 'Set up in Security')}</div>`;
+  const ck = key.startsWith('m:') ? 'card:' + key.slice(2) : 'acc:' + key.slice(2), edit = l => `<button class="sm" style="${l==='✎' ? 'padding:2px 8px;min-height:0;letter-spacing:0' : ''}" aria-label="${l==='✎' ? 'Edit details' : l}" onclick="event.stopPropagation();V.reflip='${qs(ck)}';dvEdit('${qs(key)}','${kind}')">${l}</button>`;
+  if(!S.dv) return `<div class="bk">${bl(title, `<button class="sm" onclick="event.stopPropagation();dvShowBack('${qs(key)}')">Set up</button>`)}<div class="sub" style="color:inherit;opacity:.75">Save the last 4 digits${kind==='card' ? ' and expiry' : ', IFSC and branch'} – locked with a passphrase you choose.</div></div>`;
   if(!V.dv) return `<div class="bk">${bl(title, `<button class="sm" onclick="event.stopPropagation();dvShowBack('${qs(key)}')">Unlock</button>`)}</div>`;
   const rec = V.dv.data.a[key] || {};
+  if(!Object.keys(rec).length) return `<div class="bk">${bl(title, edit('Add'))}</div>`;
   const cp = f => rec[f] ? ` <button class="sm" style="padding:2px 8px;min-height:0" onclick="event.stopPropagation();dvCopyField('${qs(key)}','${f}')" aria-label="Copy">Copy</button>` : '';
-  if(kind==='card') return `<div class="bk">${rec.last4 || rec.exp || rec.net ? bl((rec.last4 ? '•••• ' + esc(rec.last4) : title) + cp('last4'), esc([rec.exp ? 'Exp ' + rec.exp : '', rec.net || ''].filter(Boolean).join(' · '))) : bl(title, 'Not saved yet')}</div>`;
-  return `<div class="bk">${rec.last4 || rec.ifsc ? bl(rec.last4 ? 'A/c •••• ' + esc(rec.last4) : title, esc(rec.ifsc || '') + cp(rec.ifsc ? 'ifsc' : 'last4')) : bl(title, 'Not saved yet')}${rec.branch ? bl('Branch', esc(rec.branch)) : ''}</div>`;
+  if(kind==='card') return `<div class="bk">${rec.last4 || rec.exp || rec.net ? bl((rec.last4 ? '•••• ' + esc(rec.last4) : title) + cp('last4') + ' ' + edit('✎'), esc([rec.exp ? 'Exp ' + rec.exp : '', rec.net || ''].filter(Boolean).join(' · '))) : bl(title, edit('Add'))}</div>`;
+  return `<div class="bk">${rec.last4 || rec.ifsc ? bl((rec.last4 ? 'A/c •••• ' + esc(rec.last4) : title) + ' ' + edit('✎'), esc(rec.ifsc || '') + cp(rec.ifsc ? 'ifsc' : 'last4')) : bl(title, edit('Add'))}${rec.branch ? bl('Branch', esc(rec.branch)) : ''}</div>`;
 }
 function dvCopyField(key, f){ if(!V.dv) return toast('Unlock the details first'); const t = (V.dv.data.a[key] || {})[f]; if(!t) return; V.dvAt = Date.now();
   (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { toast('Copied – cleared in 30 seconds'); haptic(5); setTimeout(() => { try{ navigator.clipboard.writeText(''); }catch(e){} }, 30000); }, () => toast('Could not copy')); }
@@ -3963,7 +4048,7 @@ async function dvEditSave(){
     const cu = v('dv_cu'), br = v('dv_br'); if(/\d{12,}/.test(cu + ' ' + br)) return bad('That looks like a full account or card number – not stored'); if(cu) rec.cust = cu; if(br) rec.branch = br;
   } else { const ex = v('dv_ex'); if(ex && !/^(0[1-9]|1[0-2])\/\d{2}$/.test(ex)) return bad('Expiry like 08/29'); if(ex) rec.exp = ex; const nt = v('dv_nt'); if(nt) rec.net = nt; }
   if(Object.keys(rec).length) V.dv.data.a[V.dvKey] = rec; else delete V.dv.data.a[V.dvKey];
-  await dvSave(); closeModal(); render(); toast('Saved and locked');
+  await dvSave(); closeModal(); render(); toast('Saved – kept locked with your passphrase');
 }
 
 /* ---- backups: always locked with a password; optional recovery key (a spare code you write on paper) ---- */

@@ -268,6 +268,23 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
   notification when it is over 3 weeks old.
 - An **Instant** withdrawal asks you to confirm, because it cannot be cancelled and may cost a fee.
 
+## Search (magnifier at the top)
+- One search for **cards and accounts** (banks, cash, wallets, credit and debit cards, UPI apps, gift cards,
+  benefits), **history** and **plans** (upcoming, autopay and fixed costs, EMIs, monthly reminders, people).
+- Type a name (“Canara”), a word (“rent”) or an amount (“500” or “₹500” – exact amounts first).
+- Results come in tabs with counts – All, Cards, History, Plans – showing the top few first with **See all**.
+- Tap a result to go straight there: the wallet opens on that card, History opens at that entry, Plan opens
+  at that item, People opens that person – each briefly highlighted.
+- **Investments, IPOs, anything that moved money to or from an investment platform, and the private vault
+  are never searched.** People are left out while that section is locked. Search closes when the app locks.
+
+## Card text and card details
+- A card's text never spills out: when there is more than fits (for example an IPO hold and today's UPI use),
+  the card scrolls inside itself with a soft fade at the bottom. The same on the back.
+- The back of each bank and card shows its details straight from the Details vault: **Set up** (first time),
+  **Unlock**, **Add**, then the saved line with **Copy** and **✎** to change it.
+- Settings now starts with **Card & bank details** (Open / Set up), so the details page is easy to find.
+
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
 - A daily snapshot builds the "over time" chart.
