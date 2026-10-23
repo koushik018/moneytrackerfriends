@@ -285,6 +285,14 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
   **Unlock**, **Add**, then the saved line with **Copy** and **✎** to change it.
 - Settings now starts with **Card & bank details** (Open / Set up), so the details page is easy to find.
 
+## Entry details (History → tap an entry)
+- A read-only sheet with everything recorded on the entry: kind, date and time, paid with, account, UPI app, payee, payment type, category, cashback, UTR and transaction ID (with Copy) and where it came from (typed by you, or read from a receipt). Only **Cashback** and **Revert** act on it; to change an entry, revert it and add it again.
+- History lines show each word once, and History search also finds the payee, amount, UTR and account.
+
+## Details vault while switching apps
+- Switching to another app (for example to copy a UPI ID) keeps the vault open for one minute, so the form you are filling is not lost. After a minute away it locks; saving then asks the passphrase and still saves what you typed.
+- Expiry: type 0829 or 829 and it becomes 08/29.
+
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
 - A daily snapshot builds the "over time" chart.

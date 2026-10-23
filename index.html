@@ -226,7 +226,10 @@ button.sm { padding:6px 11px; font-size:.62rem; }
 button.ghost { border-color:transparent; color:var(--muted); }
 .chip { display:inline-block; padding:2px 8px; border:1px solid color-mix(in srgb,var(--info) 40%,transparent); border-radius:2px; font-size:.6rem; letter-spacing:.12em; text-transform:uppercase; font-weight:500; background:var(--info-bg); color:var(--info); }
 .chip.g { background:var(--good-bg); color:var(--good); border-color:color-mix(in srgb,var(--good) 40%,transparent); } .chip.b { background:var(--bad-bg); color:var(--bad); border-color:color-mix(in srgb,var(--bad) 40%,transparent); } .chip.w { background:var(--warn-bg); color:var(--warn); border-color:color-mix(in srgb,var(--warn) 40%,transparent); }
-.pos { color:var(--good); font-weight:400; } .neg { color:var(--bad); font-weight:400; }
+.pos { color:var(--good); font-weight:400; }
+.tx-open { cursor:pointer; -webkit-tap-highlight-color:transparent; } .tx-open:active { opacity:.7; } .tx-rc { color:var(--info); }
+.tx-h { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 12px; margin-bottom:8px; } .tx-h .t { font-size:1.05rem; } .tx-amt { font-size:1.3rem; }
+.tx-i { padding:10px 2px; } .tx-i > span:last-child { text-align:right; overflow-wrap:anywhere; } .neg { color:var(--bad); font-weight:400; }
 
 /* ---- home hero ---- */
 .hero { padding:26px 4px 6px; }
@@ -1382,7 +1385,7 @@ function rHistory(){
   if(V.hacc) L = L.filter(t => t.from===V.hacc || t.to===V.hacc);
   if(V.hmeth) L = L.filter(t => t.methodId===V.hmeth);
   if(V.happ) L = L.filter(t => meth(t.methodId)?.app===V.happ);
-  if(V.q) L = L.filter(t => (t.desc+' '+(t.cat||'')).toLowerCase().includes(V.q.toLowerCase()));
+  if(V.q) L = L.filter(t => txHay(t).includes(V.q.toLowerCase()));
   const sum = L.filter(t=>!t.reverted).reduce((s,t) => s + (cls(t)==='expense'?-t.amount: cls(t)==='income'?t.amount:0), 0);
   return `<div class="card"><h2>History <span class="sub">${L.length} entries · net ${inr(sum)}</span></h2>
   <div class="row"><select onchange="V.month=this.value;render()">${months.map(m=>`<option value="${m}" ${m===V.month?'selected':''}>${ymLabel(m)}</option>`).join('')}</select>
@@ -1390,18 +1393,34 @@ function rHistory(){
   ${(V.hacc || V.hmeth || V.happ) ? `<div class="row" style="align-items:center"><span class="chip">${esc(V.hacc ? (acc(V.hacc)?.name||'') : V.hmeth ? (meth(V.hmeth)?.name||'') : V.happ)}</span><button class="sm ghost" onclick="V.hacc=V.hmeth=V.happ=null;render()">× clear</button></div>` : ''}<input placeholder="Search" value="${esc(V.q)}" oninput="V.q=this.value;histSearch()">
   <div class="list" id="histList">${histRows(L)}</div></div>`;
 }
-function histSearch(){ const el = $('histList'); const L = S.txns.filter(t => ym(t.ts)===V.month && (V.ftype==='all'||cls(t)===V.ftype) && (!V.q || (t.desc+' '+(t.cat||'')).toLowerCase().includes(V.q.toLowerCase())) && (!V.hacc || t.from===V.hacc || t.to===V.hacc) && (!V.hmeth || t.methodId===V.hmeth) && (!V.happ || meth(t.methodId)?.app===V.happ)).sort((a,b)=>b.ts-a.ts); el.innerHTML = histRows(L); }
+function histSearch(){ const el = $('histList'); const L = S.txns.filter(t => ym(t.ts)===V.month && (V.ftype==='all'||cls(t)===V.ftype) && (!V.q || txHay(t).includes(V.q.toLowerCase())) && (!V.hacc || t.from===V.hacc || t.to===V.hacc) && (!V.hmeth || t.methodId===V.hmeth) && (!V.happ || meth(t.methodId)?.app===V.happ)).sort((a,b)=>b.ts-a.ts); el.innerHTML = histRows(L); }
 function histRows(L){
   if(!L.length) return '<div class="empty">Nothing here.</div>';
   return L.map(t => {
     const c = cls(t), m = meth(t.methodId);
     const accs = t.type==='expense' ? (m?.name || anm(t.from) || t.fromName || '') : t.type==='income' ? '→ ' + (anm(t.to)||'') : t.type==='adjust' ? (anm(t.to)||'') : t.type==='reward' ? (meth(t.methodId)?.name||'') : `${anm(t.from)||t.fromName||'?'} → ${anm(t.to)||t.toName||'?'}`;
     const sign = c==='expense' ? '-' : c==='income' ? '+' : '';
-    return `<div class="item ${t.reverted?'rev':''}" id="tx_${t.id}"><div class="l"><div class="t">${CATS[t.cat]||''} ${esc(t.desc)}</div><div class="sub">${t.legacy ? fdate(t.ts) : fdt(t.ts)} · ${esc(accs)}${t.vendor ? ' · ' + esc(t.vendor) : ''}${t.app?' · '+esc(t.app):''}${t.mode?' · '+(MODES[t.mode]||''):''}</div>${t.cb?`<span class="chip g">+${inr(t.cb)} cashback</span> `:''}${t.legacy?'<span class="chip">imported</span> ':''}${t.reverted?'<span class="chip w">reverted</span>':''}</div>
+    const meta = []; [accs, t.vendor, t.app, t.mode ? MODES[t.mode] : ''].filter(Boolean).forEach(x => { if(!meta.some(y => y===x || y.split(' · ').includes(x))) meta.push(x); });   // no word twice (PhonePe · Canara · PhonePe)
+    return `<div class="item ${t.reverted?'rev':''}" id="tx_${t.id}"><div class="l tx-open" onclick="txInfo('${t.id}')" role="button" tabindex="0" aria-label="Details of ${esc(t.desc)}"><div class="t">${CATS[t.cat]||''} ${esc(t.desc)}</div><div class="sub">${t.legacy ? fdate(t.ts) : fdt(t.ts)} · ${esc(meta.join(' · '))}${t.ref ? ' · <span class="tx-rc">receipt</span>' : ''}</div>${t.cb?`<span class="chip g">+${inr(t.cb)} cashback</span> `:''}${t.legacy?'<span class="chip">imported</span> ':''}${t.reverted?'<span class="chip w">reverted</span>':''}</div>
       <div class="r"><div class="${c==='expense'?'neg':c==='income'?'pos':''}">${sign}${mi(Math.abs(t.amount))}${t.type==='adjust'?(t.amount<0?'':'') :''}</div>
       <div>${t.reverted?`<button class="sm good" onclick="revert('${t.id}')">Restore</button> <button class="sm bad" onclick="delTx('${t.id}')">Delete</button>`:`${t.type==='expense'?`<button class="sm ghost" onclick="cbModal('${t.id}')">Cashback</button> `:''}<button class="sm" onclick="revertAsk('${t.id}')">Revert</button>`}</div></div></div>`;
   }).join('');
 }
+const txHay = t => [t.desc, t.cat, t.vendor, t.app, t.ref, t.ref2, t.amount, anm(t.from), anm(t.to)].filter(Boolean).join(' ').toLowerCase();
+/* everything recorded on one entry, read only – change it with Revert (and add it again) or Cashback */
+function txInfo(id){
+  const t = S.txns.find(x => x.id===id); if(!t) return; const m = meth(t.methodId), c = cls(t), row = (l, v) => v!=null && v!=='' ? `<div class="item tx-i"><span class="sub">${l}</span><span>${v}</span></div>` : '';
+  const kind = { expense:'Paid', income:'Received', transfer:'Transfer', adjust:'Balance correction', invest:'Investment', hold:'On hold', reward:'Reward' }[t.type] || t.type;
+  const src = t.src==='shot' ? 'Read from a ' + esc(t.app || 'payment') + ' receipt and checked by you' : t.legacy ? 'Imported' : t.ipoId ? 'From an IPO' : 'Typed by you';
+  openModal('Entry details', `<div class="tx-h"><div class="t">${CATS[t.cat]||''} ${esc(t.desc || '')}</div><div class="${c==='expense'?'neg':c==='income'?'pos':''} tx-amt">${c==='expense'?'-':c==='income'?'+':''}${mi(Math.abs(t.amount))}</div>${t.reverted ? '<span class="chip w">reverted</span>' : ''}</div>
+    <div class="list">${row('Kind', kind)}${row('Date & time', new Date(t.ts).toLocaleString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }))}
+    ${row(t.type==='expense' ? 'Paid with' : '', t.type==='expense' && m ? esc(m.name) : '')}${row(t.type==='income' ? 'Received in' : t.type==='expense' ? 'From account' : 'From', esc(t.type==='income' ? anm(t.to) || '' : anm(t.from) || t.fromName || ''))}${t.type==='transfer' || t.type==='invest' ? row('To', esc(anm(t.to) || t.toName || '')) : ''}
+    ${row('UPI app / channel', esc(t.app || ''))}${row('Paid to', esc(t.vendor || ''))}${row('Payment type', t.mode ? MODES[t.mode] || '' : '')}${row('Category', esc(t.cat || ''))}${t.tap ? row('Card tapped', 'Yes') : ''}
+    ${t.type==='expense' ? row('Cashback', t.cb ? inr(t.cb) : 'None') : ''}${row('UTR', t.ref ? esc(t.ref) + ` <button class="sm" onclick="txCopy('${t.id}','ref')">Copy</button>` : '')}${row('Transaction ID', t.ref2 ? esc(t.ref2) + ` <button class="sm" onclick="txCopy('${t.id}','ref2')">Copy</button>` : '')}${row('Recorded', src)}</div>
+    <div class="row">${t.reverted ? `<button class="good" onclick="closeModal();revert('${t.id}')">Restore</button>` : `${t.type==='expense' ? `<button onclick="cbModal('${t.id}')">Cashback</button>` : ''}<button onclick="closeModal();revertAsk('${t.id}')">Revert</button>`}<button class="pri" onclick="closeModal()">Close</button></div>
+    <div class="sub">Entries are not edited in place, so your history stays honest: to change one, revert it and add it again.</div>`);
+}
+function txCopy(id, f){ const t = S.txns.find(x => x.id===id), v = t && t[f]; if(!v) return; (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => { toast('Copied'); haptic(5); }, () => toast('Could not copy')); }
 function revert(id){
   const t = S.txns.find(x => x.id===id); if(!t) return;
   t.reverted = !t.reverted;
@@ -2000,7 +2019,8 @@ function rkErase(){
 function removePin(){ withPin(() => { delete S.lock; save(); render(); toast('PIN removed'); }); }
 document.addEventListener('visibilitychange', () => {
   if(!document.hidden && S && !(S.lock && !V.unlocked)){ autoRecord(); setTimeout(maybePopup, 600); }
-  if(document.hidden){ V.hiddenAt = Date.now(); V.reveal = {}; V.invOk = false; V.vaultOk = false; V.dv = null; V.lastPin = null; INTR_PRIV = null; if(S.hideAll) V.hideNow = true; return; }
+  if(document.hidden){ V.hiddenAt = Date.now(); V.reveal = {}; V.invOk = false; V.vaultOk = false; V.lastPin = null; INTR_PRIV = null; if(S.hideAll) V.hideNow = true; return; }
+  if(V.dv && V.hiddenAt && Date.now() - V.hiddenAt > 60000){ V.dv = null; if(V.tab==='details' && !$('modal').classList.contains('on')) render(); }   // details vault: locked after a minute away
   if(S && S.lock && V.unlocked && V.hiddenAt && Date.now() - V.hiddenAt > 60000) lockNow();
 });
 /* FD / RD entered in the setup form (nothing personal is stored in the code) */
@@ -4025,6 +4045,7 @@ function rDetails(){
 }
 function dvCopy(i){ const t = (V.dvCopy || [])[i]; if(!t) return; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { toast('Copied – cleared in 30 seconds'); setTimeout(() => { try{ navigator.clipboard.writeText(''); }catch(e){} }, 30000); }, () => toast('Could not copy')); V.dvAt = Date.now(); }
 function dvEdit(key, kind){
+  if(!V.dv) return dvEnsure(() => dvEdit(key, kind));
   const rec = (V.dv.data.a[key] || {}), isBank = kind==='bank', upis = (rec.upi && rec.upi.length ? rec.upi : [{ app:'', id:'' }]);
   const apps = [...new Set(APPS.concat(S.methods.filter(m => m.app).map(m => m.app)))];
   V.dvKey = key; V.dvKind = kind;
@@ -4033,10 +4054,12 @@ function dvEdit(key, kind){
       <div class="row"><label class="f">Account (last 4)<input id="dv_l4" inputmode="numeric" maxlength="4" value="${esc(rec.last4 || '')}"></label><label class="f">IFSC<input id="dv_if" maxlength="11" style="text-transform:uppercase" value="${esc(rec.ifsc || '')}"></label></div>
       <div class="row"><label class="f">Linked mobile<input id="dv_mo" inputmode="numeric" maxlength="10" value="${esc(rec.mobile || '')}"></label><label class="f">Customer ID (optional)<input id="dv_cu" maxlength="20" value="${esc(rec.cust || '')}"></label></div>
       <label class="f">Branch (optional)<input id="dv_br" maxlength="40" value="${esc(rec.branch || '')}"></label>`
-    : `<div class="row"><label class="f">Card (last 4)<input id="dv_l4" inputmode="numeric" maxlength="4" value="${esc(rec.last4 || '')}"></label><label class="f">Expiry (MM/YY)<input id="dv_ex" maxlength="5" placeholder="08/29" value="${esc(rec.exp || '')}"></label></div>
+    : `<div class="row"><label class="f">Card (last 4)<input id="dv_l4" inputmode="numeric" maxlength="4" value="${esc(rec.last4 || '')}"></label><label class="f">Expiry (MM/YY)<input id="dv_ex" maxlength="5" inputmode="numeric" placeholder="08/29" oninput="expFmt(this, event)" value="${esc(rec.exp || '')}"></label></div>
       <label class="f">Network<select id="dv_nt">${NETS.map(n => `<option ${rec.net===n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`}
     <div class="row"><button class="pri" onclick="dvEditSave()">Save</button><button onclick="closeModal()">Cancel</button></div>`);
 }
+/* MM/YY: the slash appears after the month; 2–9 as a first digit means 02–09 */
+function expFmt(e, ev){ let d = e.value.replace(/\D/g, '').slice(0, 4); if(d.length===1 && +d > 1) d = '0' + d; if(d.length===2 && +d > 12) d = '1'; const del = ev && /^delete/.test(ev.inputType || ''); e.value = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d.length===2 && !del ? d + '/' : d; }
 const dvUpiRow = u => `<div class="row dv_r"><input class="dv_ua" list="dv_apps" placeholder="App" value="${esc(u.app || '')}"><input class="dv_ui" placeholder="name@bank" value="${esc(u.id || '')}"></div>`;
 async function dvEditSave(){
   const bad = m => { toast(m); return false; }, v = id => (mv(id) || '').trim(), rec = {}, isBank = V.dvKind==='bank';
@@ -4047,8 +4070,9 @@ async function dvEditSave(){
     const mo = v('dv_mo'); if(mo && !/^\d{10}$/.test(mo)) return bad('Mobile number: 10 digits'); if(mo) rec.mobile = mo;
     const cu = v('dv_cu'), br = v('dv_br'); if(/\d{12,}/.test(cu + ' ' + br)) return bad('That looks like a full account or card number – not stored'); if(cu) rec.cust = cu; if(br) rec.branch = br;
   } else { const ex = v('dv_ex'); if(ex && !/^(0[1-9]|1[0-2])\/\d{2}$/.test(ex)) return bad('Expiry like 08/29'); if(ex) rec.exp = ex; const nt = v('dv_nt'); if(nt) rec.net = nt; }
-  if(Object.keys(rec).length) V.dv.data.a[V.dvKey] = rec; else delete V.dv.data.a[V.dvKey];
-  await dvSave(); closeModal(); render(); toast('Saved – kept locked with your passphrase');
+  const key = V.dvKey, put = async () => { if(Object.keys(rec).length) V.dv.data.a[key] = rec; else delete V.dv.data.a[key]; await dvSave(); closeModal(); render(); toast('Saved – kept locked with your passphrase'); };
+  if(!V.dv) return dvEnsure(put);   // locked while you were typing: unlock, and what you typed is saved
+  await put();
 }
 
 /* ---- backups: always locked with a password; optional recovery key (a spare code you write on paper) ---- */
