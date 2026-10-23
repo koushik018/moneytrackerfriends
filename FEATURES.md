@@ -293,6 +293,10 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
 - Switching to another app (for example to copy a UPI ID) keeps the vault open for one minute, so the form you are filling is not lost. After a minute away it locks; saving then asks the passphrase and still saves what you typed.
 - Expiry: type 0829 or 829 and it becomes 08/29.
 
+## Claiming card benefits
+- **Claim** under a benefits card opens a list of that card's perks with **Claim** and **Undo**; the back of the card also has **Claim** on each perk's line. A claim made on the back keeps the card turned over.
+- Buttons on the back of any card (Add, Claim, Edit, Set up, Unlock) now respond to a tap: the hidden face no longer sits over them.
+
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
 - A daily snapshot builds the "over time" chart.
