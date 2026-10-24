@@ -355,12 +355,10 @@ details.item summary::-webkit-details-marker { display:none; }
 .wh { display:flex; justify-content:space-between; align-items:center; }
 .cards { perspective:1100px; padding:10px calc(50% - min(145px,41vw)) 26px !important; margin:0 -16px !important; gap:0 !important; }
 .cw { flex:0 0 min(290px,82vw); aspect-ratio:1.586; scroll-snap-align:center; position:relative; perspective:1200px; contain:layout style; }
-.cf { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .62s cubic-bezier(.25,1.25,.4,1); }
-.cw.flip .cf { transform:rotateY(180deg); }
-.cc { position:absolute !important; inset:0; flex:none !important; aspect-ratio:auto !important; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+.cf { position:absolute; inset:0; }
+.cc { position:absolute !important; inset:0; flex:none !important; aspect-ratio:auto !important; }
 .cc:hover { transform:none !important; }
-.cc.back { transform:rotateY(180deg); }
-.cw:not(.flip) .cc.back, .cw.flip .cc.front { pointer-events:none; }
+.cw:not(.flip) .cc.back, .cw.flip .cc.front { visibility:hidden; pointer-events:none; }
 .cc.back .bkw { overflow:auto; display:flex; flex-direction:column; gap:8px; flex:1; margin:8px 0; scrollbar-width:none; }
 .cc.back .bk { border-top:1px solid rgba(255,255,255,.18); padding-top:6px; font-size:.72rem; }
 .cc.back .bt { display:flex; align-items:center; gap:6px; font-family:'Playfair Display',serif; font-size:.9rem; }
@@ -905,7 +903,7 @@ function render(){
   }
   if(V.tab==='home' && needsSetup()) restoreDraft();
   if(V.tab==='add') refreshSuggest();
-  if(V.tab==='home'){ wireWallet(); requestAnimationFrame(cardFades); if(V.reflip){ const w = cwEl(V.reflip); V.reflip = null; if(w){ const f = w.querySelector('.cf'); if(f) f.style.transition = 'none'; w.classList.add('flip'); void w.offsetWidth; if(f) f.style.transition = ''; } } }
+  if(V.tab==='home'){ wireWallet(); requestAnimationFrame(cardFades); if(V.reflip){ const w = cwEl(V.reflip); V.reflip = null; if(w) cwFlip(w, true, true); } }
   if(V.tab==='plan' && V.pt==='calc') calcUpdate();
   if(V.pendArr){ const p = V.pendArr; V.pendArr = null; setTimeout(() => p.later ? trLater(p.tid) : arriveModal(p.tid), 250); }
 }
@@ -3334,9 +3332,10 @@ function saveBenefit(id){
   const o = { accId:mv('bn_a'), name, worth:+mv('bn_w') || 0, times:Math.max(1, Math.round(+mv('bn_t') || 1)), period:mv('bn_p'), until:mv('bn_u') || '', note:(mv('bn_o') || '').trim() };
   const a = acc(o.accId); if(a){ const f = +mv('bn_f') || 0; if(f) a.fee = f; else delete a.fee; }
   if(id) Object.assign(benList().find(x => x.id===id), o); else benList().push(Object.assign({ id:uid(), ts:Date.now(), claims:[] }, o));
-  save(); closeModal(); V.wtab = 'benefits'; V.focus = 'ben:' + o.accId; render(); toast('Benefit saved');
+  save(); closeModal(); const same = !!id && V.tab==='home' && V.wtab==='benefits' && !!cwEl('ben:' + o.accId);
+  V.wtab = 'benefits'; V.focus = 'ben:' + o.accId; if(same) cardSwap('ben:' + o.accId); else render(); toast('Benefit saved');
 }
-function delBenefit(id){ ask('Delete this benefit?', 'Its claimed history for it is removed too.', 'Delete', () => { S.benefits = benList().filter(x => x.id!==id); save(); closeModal(); render(); }, true); }
+function delBenefit(id){ ask('Delete this benefit?', 'Its claimed history for it is removed too.', 'Delete', () => { const b = benList().find(x => x.id===id), k = b && 'ben:' + b.accId; S.benefits = benList().filter(x => x.id!==id); save(); closeModal(); if(k && benList().some(x => x.accId===b.accId) && V.tab==='home' && cwEl(k)) cardSwap(k); else render(); }, true); }
 /* what each card gave in a calendar year: claimed perks + cashback - annual fee */
 function benYearData(y){
   const now = new Date(), rows = {}, row = a => rows[a.id] = rows[a.id] || { a, perks:0, missed:0, cb:0, fee:a.fee || 0, items:[] };
@@ -3508,9 +3507,17 @@ function ensureInvest(cb){ if(V.invOk) return cb(); if(S.invLock) return showLoc
 let lastTap = { k:null, t:0 };
 function cwTap(key){ const now = Date.now(); if(lastTap.k===key && now - lastTap.t < 340){ lastTap = { k:null, t:0 }; return flipKey(key); } lastTap = { k:key, t:now }; focusCard(key); }
 const cwEl = key => [...document.querySelectorAll('.cw')].find(e => e.dataset.key===key);
+/* turn a card over: it closes to its middle (a quarter turn), shows the other face, and opens again; want = true / false / nothing (switch) */
+function cwFlip(w, want, instant){
+  const on = w.classList.contains('flip'), to = want==null ? !on : !!want, f = w.querySelector('.cf'); if(to===on) return;
+  if(w._fa){ try{ w._fa.cancel(); }catch(e){} w._fa = null; }
+  if(instant || !f || !f.animate || (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches)){ w.classList.toggle('flip', to); return; }
+  const a = f.animate([{ transform:'rotateY(0deg)', opacity:1 }, { transform:'rotateY(' + (to ? 88 : -88) + 'deg)', opacity:.85 }], { duration:150, easing:'cubic-bezier(.4,0,1,1)', fill:'forwards' });
+  w._fa = a; a.onfinish = () => { w.classList.toggle('flip', to); const b = f.animate([{ transform:'rotateY(' + (to ? -88 : 88) + 'deg)', opacity:.85 }, { transform:'rotateY(0deg)', opacity:1 }], { duration:260, easing:'cubic-bezier(.2,1.1,.4,1)' }); w._fa = b; a.cancel(); b.onfinish = () => { w._fa = null; }; };
+}
 function flipKey(key){
   if(key.startsWith('acc:') || key.startsWith('inv:')){ const a = acc(key.slice(4)); if(a && masked(a)){ revealAcc(a.id); return; } }
-  const w = cwEl(key); if(w){ w.classList.toggle('flip'); haptic(10); }
+  const w = cwEl(key); if(w){ cwFlip(w); haptic(10); }
 }
 function focusCard(key){
   if(V.stack){ if(V.focus!==key){ haptic(6); flipCards(() => { V.focus = key; refreshWallet(); }, 380); setTimeout(() => { const e = document.querySelector('.sw.sel'); if(e){ const r = e.getBoundingClientRect(); if(r.top < 70 || r.bottom > innerHeight - 220) e.scrollIntoView({ behavior:'smooth', block:'center' }); } }, 400); } return; }
@@ -3575,6 +3582,7 @@ function wireWallet(){
     const snapIdle = () => { if(touching || anim || !centres.length) return; const t = centres[nearestIdx()] - el.clientWidth/2; if(Math.abs(el.scrollLeft - t) > 1.5) springTo(t, 0, false); };
     measure();
     const f = cwEl(V.focus); if(f) el.scrollLeft = f.offsetLeft - (el.clientWidth - f.offsetWidth)/2;
+    if(SDA) requestAnimationFrame(() => requestAnimationFrame(() => { if(el.isConnected) cards.forEach(c => { c.style.animationName = 'none'; void c.offsetWidth; c.style.animationName = ''; }); }));   // restart the card animation once the strip has its place
     // our own horizontal drag: the finger moves the cards 1:1, and one swipe moves exactly one card (no fling, no skipping)
     let g0 = null;
     el.addEventListener('touchstart', e => { if(e.touches.length !== 1){ g0 = null; return; } const t = e.touches[0]; stopAnim(); touching = true; startKey = near;
@@ -4376,7 +4384,7 @@ function dvBackHTML(key, kind){
 }
 function dvCopyField(key, f){ if(!V.dv) return toast('Unlock the details first'); const t = (V.dv.data.a[key] || {})[f]; if(!t) return; V.dvAt = Date.now();
   (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { toast('Copied – cleared in 30 seconds'); haptic(5); setTimeout(() => { try{ navigator.clipboard.writeText(''); }catch(e){} }, 30000); }, () => toast('Could not copy')); }
-function dvShowBack(key){ dvEnsure(() => { refreshWallet(); setTimeout(() => { const w = cwEl(key.startsWith('m:') ? 'card:' + key.slice(2) : 'acc:' + key.slice(2)); if(w) w.classList.add('flip'); }, 40); }); }
+function dvShowBack(key){ dvEnsure(() => { refreshWallet(); setTimeout(() => { const w = cwEl(key.startsWith('m:') ? 'card:' + key.slice(2) : 'acc:' + key.slice(2)); if(w) cwFlip(w, true); }, 40); }); }
 const NETS = ['', 'Visa', 'Mastercard', 'RuPay', 'Amex', 'Other'];
 function dvRows(rec, kind){
   const r = [], add = (l, v, cp) => { if(v) r.push([l, v, cp]); };

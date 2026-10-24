@@ -332,6 +332,10 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
 - Claiming a perk, or undoing it, changes only that card: the page does not redraw, the card does not disappear and flip again, and its text never overlaps. A redraw of the same screen no longer replays the page's fade-in, and the wallet slides in without fading (a fading parent made both faces of a flipping card show).
 - A benefits card shows "N to claim" instead of "All used" while perks are left; each perk's period, worth and claimed count sit on one line.
 
+## Card flip
+- A card turns over like a book: it closes to its middle, shows the other face and opens again. Only one face exists on screen at a time, so text can never show through and every button on the back responds to a tap (the old 3D flip could draw both faces on some phones).
+- Editing or deleting a perk, like claiming one, changes only that card instead of redrawing the page. After any redraw the card strip restarts its animation so a card can not stay unpainted.
+
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.
 - A daily snapshot builds the "over time" chart.
