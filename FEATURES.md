@@ -86,7 +86,7 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
   PIN. Fingerprint never opens it.
 - **Platform value** = cash balance + holdings. Money on hold for an IPO stays in the balance.
 - **Withdraw** to a bank / **Add money** from a bank (transfers; net worth does not change).
-- **Holdings:** stocks, mutual funds, gold, bonds (invested + current value, updated by hand),
+- **Holdings:** stocks, ETFs, mutual funds, gold, bonds (invested + current value, updated by hand),
   FD and RD (calculated every day).
 - **FD:** quarterly compounding by default; value grows by days/365.
 - **RD:** each deposit at the start of its month; amounts can differ month to month; an RD can be
@@ -296,6 +296,41 @@ Use **Settings → Backup (JSON)** to keep a copy and **Restore** to move it to 
 ## Claiming card benefits
 - **Claim** under a benefits card opens a list of that card's perks with **Claim** and **Undo**; the back of the card also has **Claim** on each perk's line. A claim made on the back keeps the card turned over.
 - Buttons on the back of any card (Add, Claim, Edit, Set up, Unlock) now respond to a tap: the hidden face no longer sits over them.
+
+## Screenshot reader (Add → Read a screenshot or photo; Groww card → From screenshot)
+- Reads the text in a screenshot or a camera photo **on the phone** with the text reader built into the Android app (Google ML Kit, bundled model). The app has no internet permission, so nothing can be sent anywhere. The picture is never saved: it is shrunk in memory, read, and dropped; any temporary camera file is deleted right after.
+- **PhonePe receipts:** paid or received, amount, payee / sender, date and time, the masked account ("Debited from XXXX1234" / "Credited to XX1234", or a card ending), UTR and PhonePe transaction ID. Other UPI apps: amount, date and reference where it can.
+- **Account match:** the masked digits are matched with the last 4 digits saved in the details vault. If the vault is locked you can unlock it from the check screen; if nothing matches you pick the account and can tick **Remember** to save those last 4 digits (locked) for next time.
+- **Check before saving:** paid / received / own transfer, amount, what for, paid with, payment type, category and date can all be changed. Failed or pending receipts show a warning.
+- **No double entries:** the UTR / transaction ID is saved with the entry; reading the same receipt again warns "Already recorded". A similar amount within 20 minutes shows "Maybe already recorded".
+- **Groww balance** ("Stocks, F&O balance"): shows the screen value next to the app value and records a balance correction on Groww if you confirm. Money already on the way to your bank is left as it is.
+- **Groww holdings:** names ending in BEES or containing ETF are saved as **ETFs**; each row (name, shares, current value, invested) updates the matching holding or adds a new one. The screen count ("Holdings (n)") warns when only part of the list is on the picture; when the whole list is there, holdings missing from it can be ticked to remove. No bank balance changes.
+- **Time:** the phone's status-bar clock is ignored; the time is taken next to the receipt's date, am/pm is read even when run together, and an unclear am/pm is flagged on the check screen. A payee name cut over two lines uses the full Banking Name.
+- **App size:** the text reader's engine is packed only for phones (64-bit and 32-bit ARM, not PC emulators) and stored compressed, to keep the download small.
+- If an app blocks screenshots (Google Pay), photograph its screen with another phone and pick that photo, or use **Take a photo**.
+- **Several pictures at once:** pick many screenshots from the gallery; each opens in turn ("2 of 5") with **Skip**.
+- **₹ read as 7:** receipt apps always print ₹ before the amount, and the reader sometimes sees it as a 7 (₹950 → 7950, ₹10,000 → 710,000). When no ₹ was read, a leading 7 (or 2) that can only be the ₹ sign is dropped, and the check screen offers the other reading with one tap ("It was ₹7,950").
+- **Already added it yourself?** Besides the same UTR, the check screen lists entries typed by hand with the same amount and kind, dated from 2 days before to 5 days after the payment (entries are often added later), and never ones that already carry another receipt's reference. Best guesses first: same name, close in time, same account. **Same one** gives that entry the exact time, the reference and the payee instead of adding a second entry; **Save as new** asks first.
+- **Unlock first:** when the details vault is locked, the reader offers to unlock it before reading so accounts match by their last 4 digits.
+
+## PAN in the details vault
+- **Details → You → PAN** (also offered on the screenshot reader). Kept inside the locked details vault. It is for opening password-protected PDFs (bank statements, mutual-fund CAS) on the phone in a later update.
+
+## Entry details (History → tap an entry)
+- A read-only sheet with everything recorded on the entry: kind, date and time, paid with, account, UPI app, payee, payment type, category, cashback, UTR and transaction ID (with Copy) and where it came from (typed by you, or read from a receipt). Only **Cashback** and **Revert** act on it; to change an entry, revert it and add it again.
+- History lines show each word once, and History search also finds the payee, amount, UTR and account.
+
+## Details vault while switching apps
+- Switching to another app (for example to copy a UPI ID) keeps the vault open for one minute, so the form you are filling is not lost. After a minute away it locks; saving then asks the passphrase and still saves what you typed.
+- Expiry: type 0829 or 829 and it becomes 08/29.
+
+## Claiming card benefits
+- **Claim** under a benefits card opens a list of that card's perks with **Claim** and **Undo**; the back of the card also has **Claim** on each perk's line. A claim made on the back keeps the card turned over.
+- Buttons on the back of any card (Add, Claim, Edit, Set up, Unlock) now respond to a tap: the hidden face no longer sits over them.
+
+## Smooth card changes
+- Claiming a perk, or undoing it, changes only that card: the page does not redraw, the card does not disappear and flip again, and its text never overlaps. A redraw of the same screen no longer replays the page's fade-in, and the wallet slides in without fading (a fading parent made both faces of a flipping card show).
+- A benefits card shows "N to claim" instead of "All used" while perks are left; each perk's period, worth and claimed count sit on one line.
 
 ## Net worth
 - Spendable money + investments + money others owe you − card dues − money you owe.

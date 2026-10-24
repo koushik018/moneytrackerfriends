@@ -89,6 +89,82 @@ public class SecureScreenPlugin extends Plugin {
     }
 }
 """.replace('APPID', appid))
+open(jdir + '/TextReaderPlugin.java', 'w').write("""package APPID;
+
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Rect;
+import android.os.Environment;
+import android.util.Base64;
+import com.getcapacitor.JSArray;
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import java.io.File;
+
+/* reads the text in a picture on the phone (bundled ML Kit model, works offline); the picture stays in memory only */
+@CapacitorPlugin(name = "TextReader")
+public class TextReaderPlugin extends Plugin {
+    private TextRecognizer reader;
+
+    @PluginMethod
+    public void read(final PluginCall call) {
+        String img = call.getString("image", "");
+        int comma = img.indexOf(',');
+        if (comma >= 0) img = img.substring(comma + 1);
+        Bitmap bmp = null;
+        try {
+            byte[] bytes = Base64.decode(img, Base64.DEFAULT);
+            bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        } catch (Exception e) { bmp = null; }
+        if (bmp == null) { call.reject("The phone could not open that picture."); return; }
+        if (reader == null) reader = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        final Bitmap pic = bmp;
+        final int w = pic.getWidth(), h = pic.getHeight();
+        reader.process(InputImage.fromBitmap(pic, 0))
+            .addOnSuccessListener(text -> {
+                JSArray lines = new JSArray();
+                for (Text.TextBlock b : text.getTextBlocks()) {
+                    for (Text.Line l : b.getLines()) {
+                        JSObject o = new JSObject();
+                        o.put("t", l.getText());
+                        Rect r = l.getBoundingBox();
+                        if (r != null) { o.put("x", r.left); o.put("y", r.top); o.put("w", r.width()); o.put("h", r.height()); }
+                        lines.put(o);
+                    }
+                }
+                pic.recycle();
+                JSObject res = new JSObject();
+                res.put("lines", lines); res.put("w", w); res.put("h", h);
+                call.resolve(res);
+            })
+            .addOnFailureListener(e -> { pic.recycle(); call.reject("Could not read the text."); });
+    }
+
+    /* delete the temporary file the camera wrote for "Take a photo" */
+    @PluginMethod
+    public void clean(PluginCall call) {
+        File[] dirs = { getContext().getCacheDir(), getContext().getExternalCacheDir(), getContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES) };
+        for (File d : dirs) {
+            if (d == null) continue;
+            File[] fs = d.listFiles();
+            if (fs == null) continue;
+            for (File f : fs) {
+                String n = f.getName();
+                if (f.isFile() && n.startsWith("JPEG_") && n.endsWith(".jpg")) f.delete();
+            }
+        }
+        call.resolve();
+    }
+}
+""".replace('APPID', appid))
 open(jdir + '/MainActivity.java', 'w').write("""package APPID;
 
 import android.os.Bundle;
@@ -98,6 +174,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(SecureScreenPlugin.class);
+        registerPlugin(TextReaderPlugin.class);
         super.onCreate(savedInstanceState);
         try {
             android.webkit.WebSettings ws = getBridge().getWebView().getSettings();
@@ -123,5 +200,17 @@ if 'signingConfigs' not in b:
     sign = ("    signingConfigs {\n        debug {\n            storeFile file('" + ks + "')\n            storePassword System.getenv('KEYSTORE_PASSWORD')\n"
             "            keyAlias System.getenv('KEY_ALIAS')\n            keyPassword System.getenv('KEY_PASSWORD')\n        }\n    }\n")
     b = b.replace('android {\n', 'android {\n' + sign, 1)
+# offline text reader for screenshots (the model ships inside the APK; no Google Play download, no internet)
+if 'com.google.mlkit:text-recognition' not in b:
+    b = re.sub(r'\ndependencies \{\n', "\ndependencies {\n    implementation 'com.google.mlkit:text-recognition:16.0.1'\n", b, count=1)
+    if 'com.google.mlkit:text-recognition' not in b:
+        raise SystemExit('could not add the text reader dependency')
+# smaller APK: the text reader's native code only for phones (64-bit and older 32-bit ARM), not for PC emulators (x86), and stored compressed
+if 'abiFilters' not in b:
+    b = b.replace('defaultConfig {\n', 'defaultConfig {\n        ndk { abiFilters "arm64-v8a", "armeabi-v7a" }\n', 1)
+if 'useLegacyPackaging' not in b:
+    b = b.replace('android {\n', 'android {\n    packaging { jniLibs { useLegacyPackaging = true } }\n', 1)
+if 'abiFilters' not in b or 'useLegacyPackaging' not in b:
+    raise SystemExit('could not set the APK size options')
 open(g, 'w').write(b)
 print('prepared build', build)

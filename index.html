@@ -417,7 +417,8 @@ button:not(.pri):not(.ghost):not(.eye):not(.gi):not(.tile):not(.on):hover { back
 button.sm { min-height:30px; }
 button:disabled { opacity:.4; cursor:not-allowed; }
 /* sections slide in softly */
-main > * { animation:rise .55s cubic-bezier(.2,.8,.2,1) both; } main > *:nth-child(2) { animation-delay:.05s; } main > *:nth-child(3) { animation-delay:.1s; } main > *:nth-child(4) { animation-delay:.15s; }
+main > * { animation:rise .55s cubic-bezier(.2,.8,.2,1) both; } main.same > * { animation:none !important; }
+@keyframes riseT { from { transform:translateY(10px); } to { transform:none; } } main > .wallet { animation-name:riseT; } main > *:nth-child(2) { animation-delay:.05s; } main > *:nth-child(3) { animation-delay:.1s; } main > *:nth-child(4) { animation-delay:.15s; }
 @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
 /* modal: refined header with close button, sticky action row */
 #modal .box { gap:16px; padding:0; overflow:hidden; } #modal .box > * { margin-left:24px; margin-right:24px; }
@@ -448,6 +449,20 @@ button.pk-o:hover { background:rgba(255,255,255,.04); color:var(--text); } butto
 body.pk-open { overflow:hidden; }
 
 /* ---- add flow: boxed steps ---- */
+.ocr-safe { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:2px 0 12px; border:1px solid color-mix(in srgb,var(--good) 35%,transparent); background:var(--good-bg); border-radius:10px; font-size:.84rem; line-height:1.45; }
+.ocr-safe svg { flex:none; color:var(--good); margin-top:1px; }
+.ocr-picks { display:flex; gap:8px; margin:4px 0 12px; } .ocr-picks button { flex:1; }
+.ocr-pan { margin-top:12px; padding:12px 14px; border:1px dashed var(--border); border-radius:10px; font-size:.86rem; } .ocr-pan .sub { margin:4px 0 10px; }
+.ocr-wait { display:flex; flex-direction:column; align-items:center; gap:14px; padding:24px 0 16px; color:var(--muted); font-size:.9rem; }
+.ocr-spin { width:36px; height:36px; border-radius:50%; border:3px solid var(--border); border-top-color:var(--accent); animation:spin .8s linear infinite; }
+.ocr-warn, .ocr-ok, .ocr-hint { padding:9px 12px; margin:8px 0; border-radius:8px; font-size:.83rem; line-height:1.45; animation:rise .25s ease both; }
+.ocr-warn { background:var(--warn-bg); color:var(--warn); } .ocr-ok { background:var(--good-bg); } .ocr-hint { background:var(--info-bg); } .ocr-hint .sm { margin-left:4px; }
+.ocr-rem { display:flex; gap:8px; align-items:center; margin-top:8px; font-size:.82rem; } .ocr-rem input, .ocr-h input { width:auto; flex:none; }
+.ocr-h .l { display:flex; flex-direction:column; gap:3px; min-width:0; } .ocr-h .t { overflow-wrap:anywhere; }
+.ocr-maybe { padding:10px 12px; margin:8px 0; border-radius:8px; border:1px solid color-mix(in srgb,var(--warn) 40%,transparent); background:var(--warn-bg); font-size:.84rem; animation:rise .25s ease both; } .ocr-maybe .item { padding:9px 0; } .ocr-maybe .item:last-child { border-bottom:0; } .ocr-maybe .l { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.ocr-src { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:.86rem; }
+.add-shot { width:100%; display:flex; align-items:center; gap:12px; text-align:left; margin:0 0 14px; padding:12px 14px; text-transform:none; letter-spacing:.02em; }
+.add-shot .l { display:flex; flex-direction:column; gap:2px; } .add-shot .sub { font-size:.72rem; }
 .sw-guide { border:1px dashed var(--border); border-radius:8px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; }
 .sw-boxes { display:flex; flex-direction:column; gap:12px; margin-top:4px; }
 .sw-box { border:1px solid var(--border); border-radius:10px; background:var(--card); scroll-margin-top:72px; overflow:hidden; transition:border-color .25s, box-shadow .25s; }
@@ -881,6 +896,7 @@ function render(){
   $('hdrBtns').innerHTML = `<button class="sm ico" onclick="srOpen()" title="Search" aria-label="Search">${svg('<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>').replace('<svg','<svg class="ic"')}</button><button class="sm ico" onclick="toggleHide()" title="Show / hide amounts">${eye(!V.hideNow)}</button>${S.lock ? `<button class="sm ico" onclick="lockNow()" title="Lock">${svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>').replace('<svg','<svg class="ic"')}</button>` : ''}<button class="sm ico" onclick="go('notifs')" title="Notifications" aria-label="Notifications">${svg('<path d="M6 17h12l-1.5-2v-4a4.5 4.5 0 00-9 0v4z"/><path d="M10 20a2 2 0 004 0"/>').replace('<svg','<svg class="ic"')}</button><button class="sm ico" onclick="go('settings')" title="Profile & settings" aria-label="Profile and settings">${svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4.2 4.4-6 8-6s6.8 1.8 8 6"/>').replace('<svg','<svg class="ic"')}</button>`;
   document.body.classList.toggle('plainbg', S.bg==='plain');
   $('tabs').innerHTML = '<div class="in">' + TABS.map(([k,i,l]) => `<button class="${V.tab===k?'on':''}" onclick="go('${k}')">${i}${l}</button>`).join('') + '</div>';
+  { const rk = V.tab + '/' + (V.wtab || '') + '/' + (V.pt || '') + '/' + (V.stack ? 's' : ''); $('app').classList.toggle('same', rk===V.rkey); V.rkey = rk; }
   try{ $('app').innerHTML = desktopHint() + ({home:rHome, add:rAdd, history:rHistory, accounts:rAccounts, plan:rPlan, insights:rInsights, settings:rSettings, vault:rVault, notifs:rNotifs, sec:rSec, details:rDetails})[V.tab](); }
   catch(err){   // never leave a blank screen: say what broke and keep backup / restore reachable
     $('app').innerHTML = `<div class="card alert blue"><h2>Something went wrong on this screen</h2><div class="sub">Your data is safe. Send a screenshot of this to fix it:</div><div class="sub" style="font-family:monospace;word-break:break-all">${esc(String(err && err.message || err))} · ${esc(V.tab)}${NATIVE ? ' · app' : ' · web'}</div>
@@ -889,7 +905,7 @@ function render(){
   }
   if(V.tab==='home' && needsSetup()) restoreDraft();
   if(V.tab==='add') refreshSuggest();
-  if(V.tab==='home'){ wireWallet(); requestAnimationFrame(cardFades); if(V.reflip){ const w = cwEl(V.reflip); V.reflip = null; if(w) w.classList.add('flip'); } }
+  if(V.tab==='home'){ wireWallet(); requestAnimationFrame(cardFades); if(V.reflip){ const w = cwEl(V.reflip); V.reflip = null; if(w){ const f = w.querySelector('.cf'); if(f) f.style.transition = 'none'; w.classList.add('flip'); void w.offsetWidth; if(f) f.style.transition = ''; } } }
   if(V.tab==='plan' && V.pt==='calc') calcUpdate();
   if(V.pendArr){ const p = V.pendArr; V.pendArr = null; setTimeout(() => p.later ? trLater(p.tid) : arriveModal(p.tid), 250); }
 }
@@ -1272,6 +1288,7 @@ function rAdd(){
     <div class="sub">Moving your own money (bank → cash, bank → credit-card bill, bank → bank) is <b>not</b> a spend and earns no cashback.</div>`;
   }
   return `<div class="card"><h2>Add</h2>
+    ${f.type==='plan' ? '' : `<button class="add-shot" onclick="ocrModal()">${mark('scan', 30)}<span class="l"><b>Read a screenshot or photo</b><span class="sub">PhonePe receipt · Groww balance or holdings · offline</span></span></button>`}
     <div class="seg">${[['expense','Expense'],['income','Received'],['transfer','Transfer'],['plan','Plan']].map(([k,l])=>`<button class="${f.type===k?'on':''}" onclick="V.f={type:'${k}',mode:'${f.mode}',touched:false};render()">${l}</button>`).join('')}</div>
     ${body}<button class="pri" onclick="submitAdd()">${f.type==='plan'?'Add to plan':'Save'}</button></div>`;
 }
@@ -2486,7 +2503,7 @@ function rdValue(M, ratePct, months, start, now = new Date(), comp = 4, amts){
   if(today >= end) return rdMaturity(M, ratePct, months, comp, amts); if(today < st) return 0;
   let s = 0; for(let i = 0; i < months; i++){ const d = new Date(st.getFullYear(), st.getMonth() + i, st.getDate()); if(d > today) break; s += rdAmtAt(M, amts, i + 1)*Math.pow(1 + r/comp, comp*monthsBetween(d, today)/12); } return s;
 }
-const HTYPES = { stocks:'Stocks', mf:'Mutual funds', gold:'Digital gold', fd:'Fixed deposit (FD)', rd:'Recurring deposit (RD)', bond:'Bonds', other:'Other' };
+const HTYPES = { stocks:'Stocks', etf:'ETFs', mf:'Mutual funds', gold:'Digital gold', fd:'Fixed deposit (FD)', rd:'Recurring deposit (RD)', bond:'Bonds', other:'Other' };
 const holdingValue = (h, now) => h.type==='fd' ? fdValue(+h.principal, +h.rate, +h.months, h.start, now, h.comp ?? 4) : h.type==='rd' ? rdValue(+h.monthly, +h.rate, +h.months, h.start, now, h.comp ?? 4, h.amts) : (+h.value || 0);
 const holdingInvested = (h, now) => h.type==='fd' ? +h.principal : h.type==='rd' ? rdInvested(h, now) : (+h.invested || 0);
 function holdTotal(id){ return S.txns.filter(t => t.type==='hold' && !t.released && !t.reverted && t.from===id).reduce((x,t) => x + t.amount, 0) + (S.transit || []).filter(x => !x.done && !x.hold && x.from===id).reduce((s, x) => s + x.amount, 0); }   // IPO holds + withdrawals already asked for (money on the way)
@@ -3060,7 +3077,7 @@ function holdingModal(accId, hid, preset){
     <label class="f">Tenure (months)<input id="h_mon" type="number" value="${h.months}"></label><label class="f"><span id="h_startl">Start date</span><input id="h_start" type="date" value="${h.start||''}"></label>
     <label class="f">Interest added<select id="h_comp">${[[4,'Quarterly'],[12,'Monthly'],[2,'Half-yearly'],[1,'Yearly']].map(([v,l]) => `<option value="${v}" ${(h.comp??4)===v?'selected':''}>${l}</option>`).join('')}</select></label></div>
   <div id="h_rdx"><label class="f">Different amount in some months? (optional)<textarea id="h_amts" rows="2" placeholder="e.g. 2000, 2000, 3500, 1000">${esc((h.amts||[]).join(', '))}</textarea></label><div class="sub">Type the amount for month 1, month 2, month 3 … separated by commas. Months you don't list use the monthly amount above. Come back and add each month's real amount as you pay.</div></div>
-  <div id="h_oth" class="row"><label class="f">Invested so far (₹)<input id="h_inv" type="number" value="${h.invested||''}"></label><label class="f">Current value (₹)<input id="h_val" type="number" value="${h.value||''}"></label></div>
+  <div id="h_oth" class="row"><label class="f">Invested so far (₹)<input id="h_inv" type="number" value="${h.invested||''}"></label><label class="f">Current value (₹)<input id="h_val" type="number" value="${h.value||''}"></label><label class="f">Units / shares<input id="h_qty" type="number" step="any" placeholder="optional" value="${h.qty||''}"></label></div>
   <div class="sub" id="h_note"></div>
   <div class="row"><button class="pri" onclick="saveHolding('${hid||''}')">Save</button><button onclick="closeModal()">Cancel</button>${hid ? `<button class="bad" onclick="delHolding('${accId}','${hid}')">Delete</button>` : ''}</div>`);
   holdingUI();
@@ -3078,7 +3095,7 @@ function saveHolding(hid){
   if(dep){ const amt = +mv('h_amt'), rate = +mv('h_rate'), mon = +mv('h_mon'), start = mv('h_start'); if(!(amt > 0) || !(rate > 0) || !(mon > 0) || (t==='fd' && !start)) return toast(t==='fd' ? 'Amount, rate, tenure and start date are needed' : 'Monthly amount, rate and tenure are needed');
     Object.assign(o, t==='fd' ? { principal:amt } : { monthly:amt }, { rate, months:mon, start, comp:+mv('h_comp') });
     if(t==='rd'){ const l = mv('h_amts').split(/[\s,;]+/).filter(x => x !== '' && !isNaN(+x)).map(Number); if(l.length) o.amts = l; } }
-  else { Object.assign(o, { invested:+mv('h_inv') || 0, value:+mv('h_val') || 0, valueAt:ISO(new Date()) }); }
+  else { Object.assign(o, { invested:+mv('h_inv') || 0, value:+mv('h_val') || 0, valueAt:ISO(new Date()) }); if(+mv('h_qty') > 0) o.qty = +mv('h_qty'); }
   // an item may move to another platform when it is edited
   S.accounts.forEach(x => { if(x.holdings) x.holdings = x.holdings.filter(y => y.id!==o.id); });
   const first = !(a.holdings || []).length && a.opening && !S.txns.some(t => t.from===a.id || t.to===a.id);
@@ -3279,7 +3296,7 @@ const benDone = (b, d) => (b.claims || []).filter(c => c.key===benKey(b, d)).len
 const benTimes = b => Math.max(1, b.times || 1);
 const benLeft = b => Math.max(0, benTimes(b) - benDone(b));
 const benEnded = b => !!(b.until && new Date(b.until + 'T23:59:59') < new Date());
-function claimBen(id){ const b = benList().find(x => x.id===id); if(!b) return; if(benLeft(b) <= 0) return toast('Already fully claimed'); benKeepFlip(b); (b.claims = b.claims || []).push({ ts:Date.now(), key:benKey(b) }); save(); haptic(12); render(); toast('Marked as claimed'); }
+function claimBen(id){ const b = benList().find(x => x.id===id); if(!b) return; if(benLeft(b) <= 0) return toast('Already fully claimed'); (b.claims = b.claims || []).push({ ts:Date.now(), key:benKey(b) }); save(); haptic(12); cardSwap('ben:' + b.accId); toast('Marked as claimed'); }
 /* every benefit of one card with Claim / Undo – the clear way to mark a perk as used */
 function benClaimModal(accId){
   const a = acc(accId), bs = benList().filter(b => b.accId===accId && !benEnded(b)); if(!a) return; V.benAcc = accId;
@@ -3287,14 +3304,13 @@ function benClaimModal(accId){
   openModal(`Claim · ${esc(a.name)}`, `<div class="sub">Tap <b>Claim</b> when you use a perk (a voucher, an OTT plan, a lounge visit). It counts for this period and in your year summary.</div><div class="list">${bs.map(b => `<div class="item"><div class="l"><div class="t">${esc(b.name)}</div><div class="sub">${BPER[b.period] || ""}${b.worth ? ' · ' + inr(b.worth) : ''} · ${benDone(b)} of ${benTimes(b)} claimed</div></div><div class="r" style="display:flex;gap:6px">${benDone(b) ? `<button class="sm" onclick="unclaimBen('${b.id}');benClaimModal('${accId}')">Undo</button>` : ''}${benLeft(b) > 0 ? `<button class="sm good" onclick="claimBen('${b.id}');benClaimModal('${accId}')">Claim</button>` : '<span class="chip g">claimed</span>'}</div></div>`).join('')}</div>
     <div class="row"><button onclick="closeModal();benefitModal('','${accId}')">+ Add benefit</button><button class="pri" onclick="closeModal()">Done</button></div>`);
 }
-const benKeepFlip = b => { const w = typeof cwEl==='function' && cwEl('ben:' + b.accId); if(w && w.classList.contains('flip')) V.reflip = 'ben:' + b.accId; };   // a claim made on the card's back keeps it turned over
-function unclaimBen(id){ const b = benList().find(x => x.id===id); if(!b) return; benKeepFlip(b); const k = benKey(b), i = (b.claims || []).map(c => c.key).lastIndexOf(k); if(i < 0) return; b.claims.splice(i, 1); save(); render(); toast('Back to not claimed'); }
+function unclaimBen(id){ const b = benList().find(x => x.id===id); if(!b) return; const k = benKey(b), i = (b.claims || []).map(c => c.key).lastIndexOf(k); if(i < 0) return; b.claims.splice(i, 1); save(); cardSwap('ben:' + b.accId); toast('Back to not claimed'); }
 function benItem(a){
   const bs = benList().filter(b => b.accId===a.id), br = brandOfAcc(a), act = bs.filter(b => !benEnded(b));
   const done = act.reduce((x, b) => x + Math.min(benDone(b), benTimes(b)), 0), tot = act.reduce((x, b) => x + benTimes(b), 0), left = act.reduce((x, b) => x + benLeft(b) * (b.worth || 0), 0);
-  const row = (b, i) => `<div class="bk"><div class="bt" style="display:flex;align-items:center;gap:8px"><span style="flex:1">${i + 1}. ${esc(b.name)}${benEnded(b) ? ' <span class="chip w">ended</span>' : benLeft(b)===0 ? ' <span class="chip g">claimed</span>' : ''}</span>${!benEnded(b) && benLeft(b) > 0 ? `<button class="sm good" style="padding:3px 10px;min-height:0" onclick="event.stopPropagation();claimBen('${b.id}')">Claim</button>` : ''}</div>${bl(BPER[b.period] + (b.until ? ' · till ' + fdate(new Date(b.until + 'T00:00:00')) : ''), (b.worth ? mi(b.worth, a) : '–') + (benTimes(b) > 1 ? ' × ' + benTimes(b) : ''))}${bl('This period', benDone(b) + ' / ' + benTimes(b) + ' claimed')}${b.note ? `<div class="sub" style="color:inherit;opacity:.75">${esc(b.note)}</div>` : ''}<div class="row" style="gap:6px;margin-top:4px">${benDone(b) ? `<button class="sm" onclick="event.stopPropagation();unclaimBen('${b.id}')">Undo</button>` : ''}<button class="sm" onclick="event.stopPropagation();benefitModal('${b.id}')">Edit</button></div></div>`;
+  const row = (b, i) => `<div class="bk"><div class="bt" style="display:flex;align-items:center;gap:8px"><span style="flex:1">${i + 1}. ${esc(b.name)}${benEnded(b) ? ' <span class="chip w">ended</span>' : benLeft(b)===0 ? ' <span class="chip g">claimed</span>' : ''}</span>${!benEnded(b) && benLeft(b) > 0 ? `<button class="sm good" style="padding:3px 10px;min-height:0" onclick="event.stopPropagation();claimBen('${b.id}')">Claim</button>` : ''}</div>${bl((BPER[b.period] || '') + (b.worth ? ' · ' + mi(b.worth, a) + (benTimes(b) > 1 ? ' × ' + benTimes(b) : '') : '') + (b.until ? ' · till ' + fdate(new Date(b.until + 'T00:00:00')) : ''), benDone(b) + ' / ' + benTimes(b) + ' claimed')}${b.note ? `<div class="sub" style="color:inherit;opacity:.75">${esc(b.note)}</div>` : ''}<div class="row" style="gap:6px;margin-top:4px">${benDone(b) ? `<button class="sm" onclick="event.stopPropagation();unclaimBen('${b.id}')">Undo</button>` : ''}<button class="sm" onclick="event.stopPropagation();benefitModal('${b.id}')">Edit</button></div></div>`;
   return { key:'ben:' + a.id, html: cw('ben:' + a.id, { br, cls:'', style:palStyle(br, a),
-    front:`<div class="top"><div><div class="nm">${esc(a.name)}</div><div class="ty">Benefits · this period</div></div><div class="logo">${markA(a,34)}</div></div><div class="bot"><div class="bal">${done} of ${tot} claimed</div><div class="bar"><i style="width:${tot ? done/tot*100 : 0}%"></i></div><div class="meta"><span>${left ? mi(left, a) + ' still to use' : 'All used'}</span><span>${bs.length} benefit${bs.length > 1 ? 's' : ''}</span></div></div>`,
+    front:`<div class="top"><div><div class="nm">${esc(a.name)}</div><div class="ty">Benefits · this period</div></div><div class="logo">${markA(a,34)}</div></div><div class="bot"><div class="bal">${done} of ${tot} claimed</div><div class="bar"><i style="width:${tot ? done/tot*100 : 0}%"></i></div><div class="meta"><span>${left ? mi(left, a) + ' still to use' : done < tot ? (tot - done) + ' to claim' : 'All used'}</span><span>${bs.length} benefit${bs.length > 1 ? 's' : ''}</span></div></div>`,
     back:backHead(a.name + ' · benefits', br, a.name, a) + `<div class="bkw">${bs.map(row).join('')}</div>` + backFoot(`<button class="sm" onclick="event.stopPropagation();benefitModal('','${a.id}')">Add</button>`) }) };
 }
 const benTop = () => `<div class="card" style="padding:12px 18px;flex-direction:row;align-items:center;justify-content:space-between"><div><div class="eyebrow">Your year in benefits</div><div class="sub">What the cards gave you: perks, cashback, minus fees.</div></div><button class="sm" onclick="benYearModal()">Open</button></div>`;
@@ -3440,7 +3456,7 @@ function actsFor(key){
   if(k==='upi') return `<div class="acts">${B('Pay',`payWithApp('${q}')`)}${B('Transactions',`histForApp('${q}')`)}${B('Balance',`upiBalances('${q}')`)}${B('Link bank',`linkModal('${q}')`)}${B('Logo',`appLogoModal('${q}')`)}</div>`;
   if(k==='cb') return `<div class="acts">${meth(id)?.cb?.monthCap ? B('Earned so far',`priorCbModal('${id}')`) : ''}${B('Add reward',`rewardModal('${id}')`)}${B('Mark received',`claimCb(${Math.round(cbPending()*100)/100})`)}${B('History',`histForMethod('${id}')`)}${B('Edit rule',`methModal('${id}')`)}</div>`;
   if(k==='add') return `<div class="acts">${B('Add platform','platformModal()')}</div>`;
-  if(k==='inv') return `<div class="acts">${B('Withdraw',`moveModal('${id}','out')`)}${B('Add money',`moveModal('${id}','in')`)}${acc(id)?.reserve ? '' : B('IPO',`ipoModal()`)}${acc(id)?.reserve ? '' : B('Auto-refund',`raaModal('${id}')`)}${B('Holdings',`holdingsModal('${id}')`)}${(acc(id)?.holdings || []).length ? B('Sell / redeem',`redeemModal('${id}')`) : ''}${B('Add holding',`holdingModal('${id}')`)}${B('Details',`flipKey('${key}')`)}</div>`;
+  if(k==='inv') return `<div class="acts">${B('Withdraw',`moveModal('${id}','out')`)}${B('Add money',`moveModal('${id}','in')`)}${acc(id)?.reserve ? '' : B('IPO',`ipoModal()`)}${acc(id)?.reserve ? '' : B('Auto-refund',`raaModal('${id}')`)}${B('Holdings',`holdingsModal('${id}')`)}${(acc(id)?.holdings || []).length ? B('Sell / redeem',`redeemModal('${id}')`) : ''}${B('Add holding',`holdingModal('${id}')`)}${id===growwId() ? B('From screenshot',`ocrModal()`) : ''}${B('Details',`flipKey('${key}')`)}</div>`;
   return '';
 }
 const cbPending = () => Math.max(0, live().reduce((s,t) => s + (t.cb||0), 0) - live().filter(t => t.cbClaim).reduce((s,t) => s + t.amount, 0));
@@ -3467,6 +3483,13 @@ function walletHTML(){
     ? `<div class="pull" onclick="toggleStack(false)"><i></i></div><div class="pullhint"></div><div class="stackv">${items.map(i => `<div class="sw ${i.key===V.focus?'sel':''}">${i.html}</div>${i.key===V.focus ? `<div id="wacts">${actsFor(i.key)}</div>` : ''}`).join('')}</div>`
     : `<div class="pullhint"></div><div class="cards" id="cards">${items.map(i => i.html).join('')}</div><div id="wacts">${actsFor(V.focus)}</div>`;
   return `<div class="wallet">${head}${top}${body}${tab==='invest' ? ipoListHTML()  : ''}</div>`;
+}
+/* change one card in place: its faces are swapped and the page, the scroll position and the turn of the card stay as they are */
+function cardSwap(key){
+  const o = cwEl(key); if(V.tab!=='home' || !o) return render();
+  const t = document.createElement('div'); t.innerHTML = walletHTML(); const n = [...t.querySelectorAll('.cw')].find(e => e.dataset.key===key); if(!n) return render();
+  o.querySelector('.front').innerHTML = n.querySelector('.front').innerHTML; o.querySelector('.back').innerHTML = n.querySelector('.back').innerHTML;
+  const w = $('wacts'); if(w) w.innerHTML = actsFor(V.focus); requestAnimationFrame(cardFades);
 }
 function refreshWallet(){ const s = $('walletSlot'); if(s){ s.innerHTML = walletHTML(); wireWallet(); requestAnimationFrame(cardFades); } }
 /* a card whose text is longer than the card scrolls inside it; a soft fade shows there is more */
@@ -3979,6 +4002,324 @@ function intrDisable(kind){ S.sec = S.sec || {}; S.sec[kind] = false; save(); re
 function setShot(allow){ S.sec = S.sec || {}; S.sec.shot = allow; save(); applySecure(); render(); toast(allow ? 'Screenshots allowed' : 'Screenshots and the recent-apps preview are blocked'); }
 function applySecure(){ try{ if(NATIVE && CP('SecureScreen')) CP('SecureScreen').setSecure({ on:(S.sec || {}).shot === false }); }catch(e){} }
 
+const ocrOK = () => !!CP('TextReader');
+Object.assign(MARKS, {
+  scan:`<path class="d" pathLength="100" d="M12 34 V18 Q12 12 18 12 H34 M66 12 H82 Q88 12 88 18 V34 M88 66 V82 Q88 88 82 88 H66 M34 88 H18 Q12 88 12 82 V66" stroke="currentColor" stroke-width="7" fill="none" stroke-linecap="round"/><path class="pop" d="M22 50 H78" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path class="d" pathLength="100" d="M30 34 H62 M30 66 H54" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity=".6"/>`,
+  etf:`<rect class="pop" x="14" y="56" width="16" height="28" rx="2" fill="currentColor"/><rect class="pop" x="42" y="40" width="16" height="44" rx="2" fill="currentColor" opacity=".8"/><rect class="pop" x="70" y="24" width="16" height="60" rx="2" fill="currentColor" opacity=".6"/><path class="d" pathLength="100" d="M10 40 L36 22 L56 30 L90 10" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>`,
+  id:`<rect class="d" pathLength="100" x="8" y="20" width="84" height="60" rx="8" stroke="currentColor" stroke-width="5" fill="none"/><circle class="pop" cx="32" cy="44" r="9" fill="currentColor"/><path class="d" pathLength="100" d="M18 66 Q32 52 46 66" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/><path class="d" pathLength="100" d="M56 40 H80 M56 54 H76" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>`
+});
+const OC_MON = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+const OC_SAFE = `<div class="ocr-safe"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><div><b>Completely offline.</b> The picture is read on this phone, is not saved anywhere and is never sent – the app has no internet permission.</div></div>`;
+function ocrModal(){
+  const pan = S.panSet ? '' : `<div class="ocr-pan"><b>Want to import PDF statements later?</b><div class="sub">Bank statements and mutual-fund (CAS) PDFs are usually locked with your PAN. Save your PAN in the details vault now and the app can open them for you – on this phone, offline.</div><button class="sm" onclick="panModal()">Add PAN to the vault</button></div>`;
+  openModal('Read a screenshot', `${OC_SAFE}
+    ${S.dv && !V.dv ? `<div class="ocr-hint">Unlock your details first and the app picks your bank or card by its last 4 digits. <button class="sm" onclick="dvEnsure(ocrModal)">Unlock</button></div>` : ''}
+    <div class="ocr-picks"><button class="pri" onclick="ocrPick(false)">From gallery</button><button onclick="ocrPick(true)">Take a photo</button></div>
+    <div class="sub">You can pick several screenshots at once – they open one after another.</div>
+    <div class="sub">Reads <b>PhonePe</b> receipts (paid or received), your <b>Groww balance</b> and <b>Groww holdings</b>. For other UPI apps it picks up the amount, date and reference where it can. You check everything before it is saved.</div>
+    <div class="sub">Some apps block screenshots (Google Pay does). Take a photo of that screen with another phone and choose the photo here, or tap <b>Take a photo</b>.</div>${pan}`);
+}
+function ocrPick(cam){
+  if(!ocrOK()) return openModal('Works in the Android app', `<div class="sub">Reading pictures uses the text reader built into the Android app – it runs on the phone, offline. The browser version does not have it.</div><div class="row"><button class="pri" onclick="closeModal()">OK</button></div>`);
+  const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.hidden = true; if(cam) i.setAttribute('capture', 'environment'); else i.multiple = true;
+  i.onchange = () => { const fs = [...(i.files || [])]; i.remove(); if(!fs.length) return; V.ocQ = fs.slice(1); V.ocN = fs.length; V.ocI = 1; ocrRun(fs[0]); };
+  document.body.appendChild(i); i.click();
+}
+/* re-draw on a canvas: fixes photo rotation, caps the size, and gives the reader a plain JPEG. Nothing is written to storage */
+function ocrPrep(f){ return new Promise((res, rej) => { const u = URL.createObjectURL(f), im = new Image();
+  im.onload = () => { const W = im.naturalWidth, H = im.naturalHeight, k = Math.min(1, 2400 / Math.max(W, H), 1440 / Math.min(W, H)), c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(W*k)); c.height = Math.max(1, Math.round(H*k)); const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
+    const d = c.toDataURL('image/jpeg', .92); c.width = c.height = 0; URL.revokeObjectURL(u); im.src = ''; res(d); };
+  im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('The phone could not open that picture.')); };
+  im.src = u; }); }
+/* several pictures in one go: each one is checked and saved, then the next one opens */
+const ocStep = () => V.ocN > 1 ? ` · ${V.ocI} of ${V.ocN}` : '';
+const ocSkip = () => V.ocQ && V.ocQ.length ? `<button onclick="ocNext('Skipped')">Skip</button>` : `<button onclick="closeModal()">Cancel</button>`;
+function ocNext(msg){ if(V.ocQ && V.ocQ.length){ V.ocI++; if(msg) toast(msg); return ocrRun(V.ocQ.shift()); } closeModal(); if(msg) toast(V.ocN > 1 ? msg + ' · all ' + V.ocN + ' pictures done' : msg); V.ocN = 0; }
+async function ocrRun(f){
+  openModal('Reading…' + ocStep(), `<div class="ocr-wait"><span class="ocr-spin"></span><div>Reading the text on this phone…</div></div>${OC_SAFE}`);
+  let out;
+  try{ let img = await ocrPrep(f); out = await CP('TextReader').read({ image:img }); img = null; }
+  catch(e){ return openModal('Could not read it', `<div class="sub">${esc((e && e.message) || 'Something went wrong while reading.')} Try a clearer screenshot or photo.</div><div class="row"><button class="pri" onclick="ocrModal()">Try again</button>${ocSkip()}</div>`); }
+  finally{ try{ const tr = CP('TextReader'); if(tr && tr.clean) tr.clean(); }catch(e){} }
+  ocrShow(ocrParse(out));
+}
+function ocrShow(r){
+  if(r.kind==='hold') return ocHoldModal(r);
+  if(r.kind==='bal') return ocBalModal(r);
+  if(r.kind==='tx') return ocTxModal(r);
+  openModal('Nothing to record' + ocStep(), `<div class="sub">The app could not find a payment, a balance or holdings on this picture. It reads PhonePe receipts and Groww balance / holdings screens best. Make sure the amount and the details are fully on the screen, then try again.</div><div class="row">${V.ocQ && V.ocQ.length ? `<button class="pri" onclick="ocNext()">Next picture</button>` : `<button class="pri" onclick="ocrModal()">Try another</button><button onclick="closeModal()">Close</button>`}</div>`);
+}
+
+/* ---------- reading the lines ---------- */
+function ocLines(out){
+  let L = ((out && out.lines) || []).map(l => typeof l==='string' ? { t:l } : l).map(l => ({ t:String(l.t || '').replace(/\s+/g, ' ').trim(), x:+l.x || 0, y:+l.y || 0, w:+l.w || 0, h:+l.h || 0 })).filter(l => l.t);
+  if(L.some(l => l.h > 0)){   // put the lines in reading order: row by row (same height on screen), left to right
+    L.sort((a, b) => (a.y + a.h/2) - (b.y + b.h/2)); const rows = [];
+    L.forEach(l => { const c = l.y + l.h/2, r = rows[rows.length - 1]; if(r && Math.abs(c - r.c) < Math.min(l.h, r.h) * .55) r.l.push(l); else rows.push({ c, h:l.h, l:[l] }); });
+    L = rows.flatMap(r => r.l.sort((a, b) => a.x - b.x));
+  }
+  const H = +(out && out.h) || 0; if(H && L.some(l => l.h > 0)) L = L.filter(l => l.y + l.h/2 > H * .04);   // the status bar (phone clock, battery) is not part of the receipt
+  return L;
+}
+const ocINR = s => /^(\d{1,3}|\d{1,2}(,\d{2})*,\d{3})(\.\d{1,2})?$/.test(s);   // Indian grouping: 950 · 7,950 · 10,000 · 1,00,000
+const ocNum = s => { const v = parseFloat(String(s).replace(/,/g, '')); return isNaN(v) ? null : v; };
+const OC_RS = '(?:₹|rs\\.?|inr|z|%|\\?|\\*)';
+/* every rupee amount on a line, with whether it was in brackets or signed (+/-) or a percentage */
+function ocAmts(t){ const out = [], re = /(\()?\s*([+\-−])?\s*(₹|rs\.?\s?|inr\s?)?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*(%)?\s*(\))?/gi; let m;
+  while((m = re.exec(t))){ if(!m[4]) continue; out.push({ v:ocNum(m[4]), rs:!!m[3], par:!!(m[1] && m[6]), sign:m[2] || '', pct:!!m[5], dec:/[.,]/.test(m[4]) }); }
+  return out.filter(a => a.v!=null); }
+const ocIsAmtLine = t => new RegExp('^' + OC_RS + '?\\s*[\\d,]+(?:\\.\\d{1,2})?$', 'i').test(t.replace(/\s/g, '')) && /\d/.test(t);
+function ocDate(L){
+  const DT = [[/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-]+([A-Za-z]{3})[a-z]*[\s,\-]+(\d{4})\b/, m => OC_MON[m[2].toLowerCase()]!=null && [+m[3], OC_MON[m[2].toLowerCase()], +m[1]]],
+    [/\b([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})\b/, m => OC_MON[m[1].toLowerCase()]!=null && [+m[3], OC_MON[m[1].toLowerCase()], +m[2]]],
+    [/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](20\d{2}|\d{2})\b/, m => [m[3].length===2 ? 2000 + +m[3] : +m[3], +m[2] - 1, +m[1]]]];
+  let d = null, di = -1;
+  for(const [re, f] of DT){ for(let i = 0; i < L.length && !d; i++){ const m = L[i].t.match(re), v = m && f(m); if(v){ d = v; di = i; } } if(d) break; }
+  if(!d) return null;
+  const AP = /\b(\d{1,2})\s*[:.]\s*(\d{2})(?::\d{2})?\s*([ap])\s*\.?\s*(?:m|rn)\b\.?|\b(\d{1,2})\s*[:.]\s*(\d{2})(?::\d{2})?\s*([ap])\s*\.?\s*(?:m|rn)(?=on\b|[^a-z]|$)/i, H24 = /\b([01]?\d|2[0-3])\s*:\s*([0-5]\d)(?::\d{2})?\b/;
+  const near = [di, di - 1, di + 1].filter(i => i >= 0 && i < L.length).map(i => L[i].t);
+  let hh = 12, mm = 0, sure = false, m;
+  const ap = x => { hh = +(x[1] || x[4]) % 12 + ((x[3] || x[6]).toLowerCase()==='p' ? 12 : 0); mm = +(x[2] || x[5]); sure = true; };
+  for(const t of near){ if((m = t.match(AP))){ ap(m); break; } }
+  if(!sure){ for(const l of L){ if((m = l.t.match(AP))){ ap(m); break; } } }
+  if(!sure){ for(const t of near){ if((m = t.match(H24))){ hh = +m[1]; mm = +m[2]; sure = hh > 12 || hh===0; break; } } }
+  const ts = new Date(d[0], d[1], d[2], hh, mm).getTime();
+  return isNaN(ts) || d[2] < 1 || d[2] > 31 ? null : { ts, sure };
+}
+/* a reference written after a label, on the same line or the next one */
+function ocRef(L, re, val){
+  for(let i = 0; i < L.length; i++){ const t = L[i].t, m = t.match(re); if(!m) continue;
+    const rest = t.slice(m.index + m[0].length).replace(/^[\s:.\-#]+/, '').replace(/\s/g, ''), v = val.exec(rest); if(v) return v[0];
+    for(let j = i + 1; j <= i + 2 && j < L.length; j++){ const n = val.exec(L[j].t.replace(/\s/g, '')); if(n && n.index===0) return n[0]; } }
+  return '';
+}
+const OC_SKIP = /^(transaction|paid to|received from|sent to|debited from|credited to|banking name|transfer details|upi|utr|share|split|view|done|contact|support|from|to)\b/i;
+const ocIsUpi = t => /[\w.\-]{2,}@[a-z]{2,}/i.test(t), ocIsPhone = t => /^\+?(91)?[\s\-]?[6-9X]\d[\dX\s]{8,}$/i.test(t.replace(/\s/g, ''));
+function ocParty(L, i){   // the name under "Paid to" / "Received from"
+  const same = L[i].t.replace(/^(paid to|received from|sent to|to|from)\s*:?\s*/i, '').trim();
+  if(same && !ocIsAmtLine(same) && same.length > 2) return same;
+  for(let j = i + 1; j < Math.min(L.length, i + 5); j++){ const t = L[j].t;
+    if(OC_SKIP.test(t) || ocIsAmtLine(t) || ocIsUpi(t) || ocIsPhone(t) || t.length < 3 || !/[a-z]{2}/i.test(t) || /[X*•]{3,}/.test(t)) continue;
+    return t.replace(/\s+[₹].*$/, '').trim(); }
+  return '';
+}
+function ocrParse(out){
+  const L = ocLines(out), T = L.map(l => l.t).join('\n'), low = T.toLowerCase();
+  if(!L.length) return { kind:'none' };
+  if(/holdings\s*\(\s*\d+\s*\)/i.test(T) || (L.some(l => /^\d+(\.\d+)?\s*shares?\b/i.test(l.t)) && /invested/i.test(T))) return ocHold(L, T);
+  if(/f\s*&\s*o\s+balance|withdrawable balance|stocks,?\s*f\s*&\s*o/i.test(T)) return ocBal(L, T);
+  return ocTx(L, T, low);
+}
+function ocTx(L, T, low){
+  const r = { kind:'tx', app:'', status:'ok', type:'expense', amount:null, party:'', bank:'', upi:'', dig:'', ts:null, refs:[] }; { const dt = ocDate(L); if(dt){ r.ts = dt.ts; r.tsUnsure = !dt.sure; } }
+  r.app = /phonepe/i.test(T) ? 'PhonePe' : /google\s*pay|\bg\s?pay\b/i.test(T) ? 'GPay' : /paytm/i.test(T) ? 'Paytm' : /\bbhim\b/i.test(T) ? 'BHIM' : /\bnavi\b/i.test(T) ? 'Navi' : /kotak/i.test(T) && /upi/i.test(T) ? 'Kotak UPI' : '';
+  r.status = /\b(failed|declined|unsuccessful)\b/i.test(T) ? 'failed' : /\b(pending|processing|in progress)\b/i.test(T) ? 'pending' : 'ok';
+  const deb = /debited from|paid from|sent from/i.test(T), cred = /credited to|received in|deposited to/i.test(T), paid = /\b(paid to|sent to|paid successfully|payment to|money sent)\b/i.test(T), got = /\b(received from|money received|payment received)\b/i.test(T);
+  r.type = deb && cred ? 'transfer' : (got || cred) && !paid && !deb ? 'income' : 'expense';
+  /* amount: a line that is only an amount, preferring ones with ₹; PhonePe shows it twice, so the value seen most often wins */
+  /* receipt apps always print ₹ before the amount, and the reader sometimes sees that ₹ as a 7 (₹950 → 7950, ₹10,000 → 710,000): the first digit is dropped when it can only be the ₹ sign */
+  const rsSeen = L.some(l => ocIsAmtLine(l.t) && /^(₹|rs|inr)/i.test(l.t.replace(/\s/g, ''))), c = new Map(), alt = {};
+  const add = (v, w, o) => { if(!(v > 0) || v >= 1e8) return; c.set(v, (c.get(v) || 0) + w); if(o!=null && alt[v]==null) alt[v] = o; };
+  L.forEach(l => { if(!ocIsAmtLine(l.t)) return; const raw = l.t.replace(/\s/g, '');
+    if(/^(₹|rs\.?|inr)/i.test(raw)) return add(ocNum(raw.replace(/^(₹|rs\.?|inr)/i, '')), 3);
+    if(/^[%z?*]/i.test(raw)) return add(ocNum(raw.slice(1)), 2);
+    const v = ocNum(raw), st = raw.slice(1), fmt = x => raw.includes(',') ? ocINR(x) : /^[1-9]\d*(\.\d{1,2})?$/.test(x);
+    if(r.app && /^[72][1-9]/.test(raw) && fmt(st) && (!ocINR(raw) || !rsSeen)) return add(ocNum(st), 2, v);
+    add(v, ocINR(raw) && /[.,]/.test(raw) ? 1.5 : 1); });
+  if(!c.size) L.forEach(l => ocAmts(l.t).filter(a => a.rs && !a.pct).forEach(a => { if(a.v > 0 && a.v < 1e8) c.set(a.v, (c.get(a.v) || 0) + 1); }));
+  if(c.size){ r.amount = [...c.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0]; if(alt[r.amount]!=null) r.alt = alt[r.amount]; }
+  const pi = L.findIndex(l => /^(paid to|received from|sent to|to|from)\b/i.test(l.t) && !/debited|credited/i.test(l.t));
+  if(pi >= 0) r.party = ocParty(L, pi);
+  const bn = T.match(/banking name\s*:?\s*([^\n]+)/i); if(bn){ r.bank = bn[1].trim(); if(!r.party) r.party = r.bank; }
+  { const k = x => x.toLowerCase().replace(/[^a-z0-9]/g, ''); if(r.bank && r.party && k(r.bank).length > k(r.party).length && k(r.bank).startsWith(k(r.party))) r.party = r.bank; }   // a name cut over two lines: the banking name has it whole
+  const u = T.match(/[\w.\-]{2,}@[a-z]{2,}/i); if(u) r.upi = u[0];
+  /* the account: masked digits after "Debited from" / "Credited to" (XXXXXXXX1234, XX1234, 356129XXXXXXX87) */
+  const ai = L.findIndex(l => /debited from|credited to|paid from|received in/i.test(l.t)), zone = ai >= 0 ? L.slice(ai, ai + 4) : L;
+  for(const l of zone){ const m = l.t.replace(/\s/g, '').match(/(?:^|[^\d])[X×x*•.]{2,}-?(\d{2,4})(?!\d)/) || l.t.replace(/\s/g, '').match(/\d{4,6}[X×x*•]{3,}(\d{2,4})(?!\d)/); if(m){ r.dig = m[1]; r.accText = l.t; break; } }
+  const utr = ocRef(L, /\bUTR\b(?:\s*(?:no\.?|number|ref))?/i, /[A-Z0-9]{10,22}/i), tid = ocRef(L, /(?:phonepe |upi |google )?transaction id|upi ref(?:erence)?\.?\s*(?:no|id)?|reference (?:no|id)/i, /[A-Z0-9]{10,30}/i);
+  r.refs = [...new Set([utr, tid].filter(Boolean))];
+  if(!r.amount) return { kind:'none' };
+  if(!/paid|received|debited|credited|transaction|utr|upi|payment/i.test(T)) r.loose = true;
+  return r;
+}
+function ocBal(L, T){
+  const i = L.findIndex(l => /f\s*&\s*o\s+balance|withdrawable balance|stocks,?\s*f\s*&\s*o/i.test(l.t)); let v = null;
+  for(let j = i; j < Math.min(L.length, i + 4) && v==null; j++){ const a = ocAmts(L[j].t).filter(x => !x.pct && (x.rs || x.dec)); if(a.length) v = a[0].v; }
+  if(v==null){ const ci = L.findIndex(l => /^cash\b/i.test(l.t)); if(ci >= 0) for(let j = ci; j < Math.min(L.length, ci + 3) && v==null; j++){ const a = ocAmts(L[j].t).filter(x => !x.pct && (x.rs || x.dec)); if(a.length) v = a[0].v; } }
+  return v==null ? { kind:'none' } : { kind:'bal', v };
+}
+const OC_HEAD = /^(holdings|total returns?|invested|current|1d returns?|sort|returns|stocks|mutual funds|explore|dashboard|orders|positions|watchlist|all|equity|etfs?|filter|search|ipo|demat|portfolio|p&l)\b/i;
+const ocNameLike = t => /[a-z]{2}/i.test(t) && !/₹|%|^\d/.test(t) && !/^\d+(\.\d+)?\s*shares?\b/i.test(t) && !OC_HEAD.test(t) && t.length >= 2;
+function ocHold(L, T){
+  const r = { kind:'hold', rows:[], count:null, total:null, inv:null }, cm = T.match(/holdings\s*\(\s*(\d+)\s*\)/i); if(cm) r.count = +cm[1];
+  const hi = L.findIndex(l => /holdings\s*\(/i.test(l.t));
+  if(hi >= 0) for(let j = hi; j < Math.min(L.length, hi + 4); j++){ const a = ocAmts(L[j].t).find(x => x.rs && !x.sign && !x.pct); if(a){ r.total = a.v; break; } }
+  const ii = L.findIndex(l => /^invested\b/i.test(l.t)); if(ii >= 0) for(let j = ii; j < Math.min(L.length, ii + 3); j++){ const a = ocAmts(L[j].t).find(x => x.rs && !x.pct); if(a){ r.inv = a.v; break; } }
+  const sh = L.map((l, i) => [i, l.t.match(/^(\d+(?:\.\d+)?)\s*shares?\b/i)]).filter(x => x[1]);
+  sh.forEach(([i, m], k) => {
+    let n = -1; for(let j = i - 1; j >= Math.max(0, i - 5); j--){ if(ocNameLike(L[j].t)){ n = j; break; } if(/^\d+(\.\d+)?\s*shares?\b/i.test(L[j].t)) break; }
+    const stop = k + 1 < sh.length ? sh[k + 1][0] : L.length; let end = i + 1;
+    while(end < stop && end <= i + 3 && !ocNameLike(L[end].t)) end++;   // the amounts sit on the name row and on the shares row
+    const a = []; for(let j = (n >= 0 ? n : i); j < end; j++) a.push(...ocAmts(L[j].t.replace(/^\d+(\.\d+)?\s*shares?/i, '')).filter(x => !x.pct && (x.rs || x.par)));
+    const inv = a.find(x => x.par), cur = a.find(x => !x.par && !x.sign);
+    if(n < 0 || !cur) return;
+    r.rows.push({ name:L[n].t.replace(/\s+₹.*$/, '').trim(), qty:+m[1], value:cur.v, invested:inv ? inv.v : null });
+  });
+  return r.rows.length ? r : { kind:'none' };
+}
+
+/* ---------- a payment from a receipt ---------- */
+const ocAccOpts = (sel, kinds = ['bank', 'wallet', 'cash', 'credit']) => S.accounts.filter(a => kinds.includes(a.type) && !a.inactive).map(a => `<option value="${a.id}" ${a.id===sel ? 'selected' : ''}>${esc(a.name)}</option>`).join('');
+const ocMethOpts = sel => S.methods.filter(m => !m.inactive && acc(m.accountId) && !acc(m.accountId).inactive && acc(m.accountId).type!=='invest').map(m => { const a = acc(m.accountId); return `<option value="${m.id}" ${m.id===sel ? 'selected' : ''}>${esc(a.name)} · ${esc(m.kind==='upi' ? (m.app || 'UPI') : m.name)}</option>`; }).join('');
+/* which of your accounts the masked digits belong to – using the last 4 digits saved in the details vault */
+function ocMatch(dig){
+  if(!dig || !V.dv) return null; const hits = [];
+  for(const [k, rec] of Object.entries(V.dv.data.a || {})){ if(!rec.last4 || !rec.last4.endsWith(dig)) continue; const id = k.slice(2), m = k[0]==='m' ? meth(id) : null, a = m ? acc(m.accountId) : acc(id); if(a && !a.inactive) hits.push({ a, m }); }
+  return hits[0] || null;
+}
+function ocPickMeth(accId, app){ const ms = S.methods.filter(m => m.accountId===accId && !m.inactive); return ms.find(m => m.kind==='upi' && m.app===app) || ms.find(m => m.kind==='upi') || ms[0] || null; }
+function ocMode(r){ const s = (r.upi || '') + ' ' + (r.bank || '') + ' ' + (r.party || '');
+  return /(^|\s)q\d|paytmqr|bharatpe|razorpay|rzp|payu|cashfree|ezetap|pinelab|mswipe|merchant|\b(pvt|private|ltd|limited|llp|enterprises?|stores?|traders?|mart|services|restaurant|hotel|petroleum|fuels?|medical|pharma|foods?|bakery|supermarket|agenc(y|ies)|retail|shop)\b/i.test(s) ? 'qr' : 'p2p'; }
+/* already in the app? Sure: the same UTR / transaction ID. Maybe: an entry typed by hand with the same amount and kind, dated from 2 days before
+   the receipt to 5 days after it (people often add it later), never one that already has another receipt's reference. Best guesses first: same name, close in time, same account */
+const ocWords = s => String(s || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !['upi','pvt','ltd','the','and','payment'].includes(w));
+function ocDups(r, amount, ts, type, accId){
+  const R = new Set(r.refs || []), sure = R.size ? S.txns.find(t => !t.reverted && ((t.ref && R.has(t.ref)) || (t.ref2 && R.has(t.ref2)))) : null;
+  if(sure || !(amount > 0)) return { sure, maybe:[] };
+  const pw = new Set(ocWords((r.party || '') + ' ' + (r.bank || '') + ' ' + (r.desc || '')));
+  const maybe = S.txns.filter(t => !t.reverted && t.type===type && !t.ref && Math.abs(t.amount - amount) < .5 && t.ts > ts - 2*864e5 && t.ts < ts + 5*864e5)
+    .map(t => { let sc = 0; if(ocWords((t.desc || '') + ' ' + (t.vendor || '')).some(w => pw.has(w))) sc += 3; if(Math.abs(t.ts - ts) < 3*36e5) sc += 2; else if(t.ts >= ts) sc += 1; if(accId && (t.from===accId || t.to===accId)) sc += 1; return { t, sc }; })
+    .sort((a, b) => b.sc - a.sc || Math.abs(a.t.ts - ts) - Math.abs(b.t.ts - ts)).slice(0, 3).map(x => x.t);
+  return { sure:null, maybe };
+}
+const ocAccOf = r => r.type==='expense' ? (meth(r.meth) || {}).accountId : r.type==='income' ? r.acc : r.from;
+const ocTxWhere = t => [acc(t.from)?.name, acc(t.to)?.name].filter(Boolean).join(' → ');
+function ocTxModal(r){
+  V.oc = r; const mt = ocMatch(r.dig);
+  r.acc = r.acc || (mt ? mt.a.id : ''); r.meth = r.meth || (mt ? (mt.m && mt.m.kind!=='debit' ? mt.m.id : (ocPickMeth(mt.a.id, r.app) || {}).id) : '') || '';
+  if(!r.meth && r.type==='expense'){ const m = S.methods.find(m => !m.inactive && m.kind==='upi' && m.app===r.app && acc(m.accountId) && !acc(m.accountId).inactive); if(m) r.meth = m.id; }
+  r.mode = r.mode || ocMode(r); r.desc = r.desc ?? r.party; r.cat = r.cat || guessCat(r.party || '');
+  ocTxDraw();
+}
+function ocTxRead(){ const r = V.oc; if(!r || !$('oc_a')) return; const na = parseFloat(mv('oc_a')) || null; if(na!==r.amount && na!==r.alt) r.alt = null; r.amount = na; r.desc = mv('oc_d'); r.party = mv('oc_p') ?? r.party; r.tsIn = mv('oc_t');
+  if($('oc_m')) r.meth = mv('oc_m'); if($('oc_c')) r.cat = mv('oc_c'); if($('oc_md')) r.mode = mv('oc_md'); if($('oc_to')) r.acc = mv('oc_to'); if($('oc_fr')) r.from = mv('oc_fr'); if($('oc_tt')) r.to = mv('oc_tt'); if($('oc_v')) r.via = mv('oc_v'); if($('oc_rem')) r.rem = $('oc_rem').checked; }
+function ocType(k){ ocTxRead(); V.oc.type = k; haptic(3); ocTxDraw(); }
+function ocTxDraw(){
+  const r = V.oc, ty = r.type, tsv = r.tsIn || nowLocal(r.ts || Date.now()), mt = ocMatch(r.dig), ma = mt ? mt.a : null;
+  const st = r.status==='failed' ? `<div class="ocr-warn"><b>This payment failed.</b> Money that failed usually comes back by itself – most people do not record it.</div>` : r.status==='pending' ? `<div class="ocr-warn"><b>Still pending.</b> Record it once it is successful, or record it now and check later.</div>` : '';
+  const D = ocDups(r, r.amount, tsFrom(tsv), ty, ocAccOf(r));
+  const dupH = D.sure ? `<div class="ocr-warn"><b>Already recorded:</b> this receipt (same reference) is in the app – ${esc(D.sure.desc || '')} · ${inr(D.sure.amount)} · ${fdt(D.sure.ts)}</div>`
+    : D.maybe.length ? `<div class="ocr-maybe"><b>Already added it yourself?</b><div class="sub">Same amount, from 2 days before to 5 days after this payment. If one is this payment, tap <b>Same one</b>: it gets the exact time and the reference, and nothing new is added.</div>${D.maybe.map(t => `<div class="item"><span class="l"><span class="t">${esc(t.desc || '')}</span><span class="sub">${inr(t.amount)} · ${fdt(t.ts)}${ocTxWhere(t) ? ' · ' + esc(ocTxWhere(t)) : ''}</span></span><button class="sm good" onclick="ocLink('${t.id}')">Same one</button></div>`).join('')}</div>` : '';
+  const altH = r.alt ? `<div class="ocr-hint">Read as <b>${inr(r.amount)}</b> – the ₹ sign can look like a ${String(r.alt)[0]}. <button class="sm" onclick="ocAltUse()">It was ${inr(r.alt)}</button></div>` : '';
+  let accLine = '';
+  if(r.dig){ const dd = '•••• ' + esc(r.dig);
+    if(ma) accLine = `<div class="ocr-ok">${ty==='income' ? 'Credited to' : 'Paid from'} ${dd} → <b>${esc(ma.name)}</b> <span class="sub">matched with your saved details</span></div>`;
+    else if(S.dv && !V.dv) accLine = `<div class="ocr-hint">${ty==='income' ? 'Credited to' : 'Paid from'} ${dd}. <button class="sm" onclick="ocTxRead();dvEnsure(() => ocTxModal(V.oc))">Unlock details to match it</button></div>`;
+    else if(!S.dv) accLine = `<div class="ocr-hint">${ty==='income' ? 'Credited to' : 'Paid from'} ${dd}. Save the last 4 digits of your accounts in the details vault and the app picks the account by itself next time. <button class="sm" onclick="ocTxRead();dvEnsure(() => ocTxModal(V.oc))">Set up</button></div>`;
+    else accLine = `<div class="ocr-hint">${ty==='income' ? 'Credited to' : 'Paid from'} ${dd} – pick the account below.${r.dig.length===4 ? `<label class="ocr-rem"><input type="checkbox" id="oc_rem" checked> Remember •••• ${esc(r.dig)} for it (kept locked in your details)</label>` : ''}</div>`; }
+  let body = '';
+  if(ty==='expense') body = `<label class="f">Paid with<select id="oc_m">${ocMethOpts(r.meth)}</select></label>
+    <div class="row"><label class="f">Payment type<select id="oc_md">${Object.keys(MODES).map(k => `<option value="${k}" ${k===r.mode ? 'selected' : ''}>${MODES[k]}</option>`).join('')}</select></label><label class="f">Category<select id="oc_c">${cats().map(c => `<option ${c===r.cat ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>`;
+  else if(ty==='income'){ const to = r.acc || (S.accounts.find(a => a.type==='bank' && !a.inactive) || {}).id; body = `<div class="row"><label class="f">Received in<select id="oc_to" onchange="$('oc_v').innerHTML=incViaOpts(this.value, V.oc.app)">${ocAccOpts(to)}</select></label><label class="f">Received through<select id="oc_v">${incViaOpts(to, r.via || r.app)}</select></label></div>`; }
+  else body = `<div class="row"><label class="f">From<select id="oc_fr">${ocAccOpts(r.from || r.acc)}</select></label><label class="f">To<select id="oc_tt">${ocAccOpts(r.to)}</select></label></div>`;
+  openModal('Check and save' + ocStep(), `<div class="ocr-src">${r.app ? mark(guessBrand(r.app), 22, r.app) : ''}<span>${esc(r.app ? r.app + ' receipt' : 'From your picture')}${r.status==='ok' && !r.loose ? ' · successful' : ''}</span></div>${r.loose ? '<div class="ocr-warn">Not a screen the app knows well – check every field.</div>' : ''}${st}${dupH}
+    <div class="seg" id="oc_ty">${[['expense','Paid'],['income','Received'],['transfer','Own transfer']].map(([k, l]) => `<button type="button" class="${ty===k ? 'on' : ''}" onclick="ocType('${k}')">${l}</button>`).join('')}</div>
+    <div class="row"><label class="f" style="flex:2">${ty==='income' ? 'From whom' : ty==='transfer' ? 'Note' : 'What for'}<input id="oc_d" value="${esc(r.desc || '')}"></label><label class="f">Amount (₹)<input id="oc_a" type="number" inputmode="decimal" value="${r.amount ?? ''}" onchange="ocTxRead();ocTxDraw()"></label></div>${altH}
+    ${ty==='expense' ? `<label class="f">Paid to<input id="oc_p" value="${esc(r.party || '')}"></label>` : ''}
+    ${accLine}${body}
+    <label class="f">Date & time<input id="oc_t" type="datetime-local" value="${esc(tsv)}"></label>${r.tsUnsure ? '<div class="ocr-warn">The time on the picture was not clear (am or pm) – check it.</div>' : !r.ts ? '<div class="ocr-warn">No date found on the picture – today is filled in. Check it.</div>' : ''}
+    ${r.refs.length ? `<div class="sub">Reference: ${r.refs.map(esc).join(' · ')} – saved with the entry so the same receipt is not added twice.</div>` : ''}
+    <div class="row"><button class="pri" onclick="ocTxSave()">${D.sure ? 'Save again anyway' : D.maybe.length ? 'Save as new' : 'Save'}</button>${ocSkip()}</div>
+    <div class="sub">The picture is already gone. Only what you save here is kept.</div>`);
+}
+async function ocTxSave(force){
+  ocTxRead(); const r = V.oc, amount = r.amount, desc = (r.desc || '').trim(), ts = tsFrom(r.tsIn), ty = r.type;
+  if(!(amount > 0)) return toast('Enter the amount');
+  if(ts > Date.now() + 864e5) return toast('That date is in the future – check it');
+  const D = ocDups(r, amount, ts, ty, ocAccOf(r));
+  if(!force && D.sure) return ask('Already recorded', `This receipt was saved before: <b>${esc(D.sure.desc || '')}</b> · ${inr(D.sure.amount)} · ${fdt(D.sure.ts)}.`, 'Save anyway', () => ocTxSave(1));
+  if(!force && D.maybe.length) return ask('Save as a new entry?', `<b>${esc(D.maybe[0].desc || '')}</b> · ${inr(D.maybe[0].amount)} · ${fdt(D.maybe[0].ts)} looks like the same payment. If it is, tap <b>Same one</b> next to it instead.`, 'Save as new', () => ocTxSave(1));
+  let t, accId;
+  if(ty==='expense'){
+    if(!desc) return toast('Enter what it was for');
+    const m = meth(r.meth); if(!m) return toast('Pick how you paid'); accId = m.accountId;
+    t = postExpense({ desc, amount, m, vendor:(r.party || '').trim(), mode:r.mode || 'p2p', cat:r.cat || 'Other', app:m.app || r.app || '', ts, cbOverride:null }); if(!t) return;
+  } else if(ty==='income'){
+    if(!desc) return toast('Who sent it?'); if(!r.acc) return toast('Pick where it came in'); accId = r.acc;
+    t = { id:uid(), ts, type:'income', amount, desc, cat:'Family', to:r.acc, app:r.via || '' }; S.txns.push(t);
+  } else {
+    if(!r.from || !r.to || r.from===r.to) return toast('Pick two different accounts'); accId = r.from;
+    t = { id:uid(), ts, type:'transfer', amount, desc:desc || 'Transfer', cat:'Other', from:r.from, to:r.to }; S.txns.push(t);
+  }
+  if(r.refs[0]) t.ref = r.refs[0]; if(r.refs[1]) t.ref2 = r.refs[1]; t.src = 'shot';
+  const rem = await ocRemember(r, accId);
+  save(); haptic([8, 30, 12]); V.oc = null; render(); ocNext('Saved' + rem);
+}
+async function ocRemember(r, accId){
+  if(!(r.rem && V.dv && /^\d{4}$/.test(r.dig || '') && accId) || ocMatch(r.dig)) return ''; const k = dvKey(accId), rec = V.dv.data.a[k] || {};
+  if(rec.last4) return ''; V.dv.data.a[k] = Object.assign({}, rec, { last4:r.dig }); await dvSave(); return ' · •••• ' + r.dig + ' remembered';
+}
+/* the receipt is an entry you already typed: give that entry the exact time and the reference instead of adding a second one */
+async function ocLink(id){
+  ocTxRead(); const r = V.oc, t = S.txns.find(x => x.id===id); if(!r || !t) return;
+  t.ts = tsFrom(r.tsIn); if(r.refs[0]) t.ref = r.refs[0]; if(r.refs[1]) t.ref2 = r.refs[1]; t.src = 'shot';
+  if(t.type==='expense' && !t.vendor && r.party) t.vendor = r.party.trim();
+  const rem = await ocRemember(r, t.type==='income' ? t.to : t.from);
+  save(); haptic([8, 30, 12]); V.oc = null; render(); ocNext('Matched – exact time and reference added' + rem);
+}
+function ocAltUse(){ ocTxRead(); const r = V.oc; [r.amount, r.alt] = [r.alt, r.amount]; haptic(3); ocTxDraw(); }
+
+/* ---------- Groww balance ---------- */
+const trFromOf = id => (S.transit || []).filter(x => !x.done && !x.hold && x.from===id).reduce((s, x) => s + x.amount, 0);
+function ocBalModal(r){
+  const id = growwId(); if(!id) return openModal('Groww balance', `<div class="sub">The screen shows <b>${inr(r.v)}</b>, but Groww is not in your tracker yet. Add it with <b>+ Add</b> → Investments, then read the screenshot again.</div><div class="row"><button class="pri" onclick="closeModal()">OK</button></div>`);
+  const now = net(id) - trFromOf(id), diff = Math.round((r.v - now)*100)/100; V.ocBal = r.v;
+  openModal('Groww balance' + ocStep(), `${OC_SAFE}<div class="item"><span>On the screen</span><b>${inr(r.v)}</b></div><div class="item"><span>In the app now</span><b>${inr(now)}</b></div>
+    ${Math.abs(diff) < .01 ? `<div class="ocr-ok">They match – nothing to change.</div><div class="row"><button class="pri" onclick="ocNext()">${V.ocQ && V.ocQ.length ? 'Next picture' : 'Done'}</button></div>`
+    : `<div class="sub">${diff > 0 ? 'The screen has ' + inr(diff) + ' more' : 'The screen has ' + inr(-diff) + ' less'}. Updating records a balance correction, the same as <b>Balance</b> on the card.${trFromOf(id) ? ' Money already on the way to your bank is kept as it is.' : ''}</div><div class="row"><button class="pri" onclick="ocBalSave()">Update Groww to ${inr(r.v)}</button>${ocSkip()}</div>`}`);
+}
+function ocBalSave(){ const id = growwId(), v = V.ocBal; if(!id || v==null) return; applyActual(id, v + trFromOf(id)); save(); haptic(12); render(); ocNext('Groww balance updated'); }
+
+/* ---------- Groww holdings ---------- */
+const ocKey = s => String(s || '').toLowerCase().replace(/\(ipo\)|·.*$|\bipo\b|\bshares?\b|\betf\b|\bltd\b|\blimited\b/g, '').replace(/[^a-z0-9]/g, '');
+function ocHoldFind(a, name){ const k = ocKey(name); if(!k) return null; return (a.holdings || []).find(h => { const hk = ocKey(h.name); return hk && (hk===k || hk.startsWith(k) || k.startsWith(hk)); }) || null; }
+function ocHoldModal(r){
+  const id = growwId(), a = id && acc(id); if(!a) return openModal('Groww holdings', `<div class="sub">Groww is not in your tracker yet. Add it with <b>+ Add</b> → Investments, then read the screenshot again.</div><div class="row"><button class="pri" onclick="closeModal()">OK</button></div>`);
+  V.ocH = r; const now = new Date(), sum = r.rows.reduce((s, x) => s + x.value, 0);
+  const part = r.count!=null && r.count > r.rows.length ? `<div class="ocr-warn">The screen says ${r.count} holdings and ${r.rows.length} ${r.rows.length===1 ? 'is' : 'are'} on this picture. Scroll and read another screenshot for the rest.</div>` : '';
+  const seen = new Set(r.rows.map(x => (ocHoldFind(a, x.name) || {}).id).filter(Boolean));
+  const gone = r.count!=null && r.count===r.rows.length ? (a.holdings || []).filter(h => (h.type==='stocks' || h.type==='etf') && !h.ipoId && !seen.has(h.id) && holdingValue(h, now) > 0) : [];
+  openModal('Groww holdings' + ocStep(), `${OC_SAFE}${part}<div class="sub">Tick what to update. Values are taken from the screen; nothing is bought or sold and no bank balance changes.</div>
+    <div class="list">${r.rows.map((x, i) => { const h = ocHoldFind(a, x.name), pl = x.invested!=null ? x.value - x.invested : null;
+      return `<label class="item ocr-h"><input type="checkbox" id="oh_${i}" checked><span class="l" style="flex:1"><span class="t">${esc(x.name)}</span><span class="sub">${x.qty} shares · ${h ? (ocKey(h.name)===ocKey(x.name) ? 'updates your holding' : 'updates ' + esc(h.name)) + (holdingValue(h, now) ? ' (now ' + inr(holdingValue(h, now)) + ')' : '') : 'new holding'}</span></span><span style="text-align:right"><b>${inr(x.value)}</b>${x.invested!=null ? `<span class="sub" style="display:block">invested ${inr(x.invested)}</span><span class="${pl >= 0 ? 'pos' : 'neg'}" style="display:block;font-size:.75rem">${pl >= 0 ? '+' : '−'}${inr(Math.abs(pl))}</span>` : ''}</span></label>`; }).join('')}</div>
+    ${gone.length ? `<div class="eyebrow" style="margin-top:10px">In the app but not on the screen</div>${gone.map(h => `<label class="item ocr-h"><input type="checkbox" class="oh_gone" value="${h.id}"><span class="l" style="flex:1"><span class="t">${esc(h.name)}</span><span class="sub">Tick to remove it – only if you sold it</span></span><b>${inr(holdingValue(h, now))}</b></label>`).join('')}` : ''}
+    ${r.total!=null && Math.abs(r.total - sum) > 1 && !part ? `<div class="sub">The screen total is ${inr(r.total)}; the rows add up to ${inr(sum)}.</div>` : ''}
+    <div class="row"><button class="pri" onclick="ocHoldSave()">Update holdings</button>${ocSkip()}</div>`);
+}
+function ocHoldSave(){
+  const r = V.ocH, id = growwId(), a = id && acc(id); if(!r || !a) return; const d = ISO(new Date()); let n = 0;
+  r.rows.forEach((x, i) => { if(!$('oh_' + i) || !$('oh_' + i).checked) return; const h = ocHoldFind(a, x.name); n++;
+    if(h){ h.value = x.value; if(x.invested!=null) h.invested = x.invested; h.qty = x.qty; h.valueAt = d; }
+    else a.holdings = (a.holdings || []).concat({ id:uid(), type:/bees$|\betf\b/i.test(x.name) ? 'etf' : 'stocks', name:x.name, qty:x.qty, invested:x.invested ?? x.value, value:x.value, valueAt:d }); });
+  const del = [...document.querySelectorAll('.oh_gone:checked')].map(e => e.value); if(del.length){ a.holdings = a.holdings.filter(h => !del.includes(h.id)); n += del.length; }
+  if(!n) return toast('Nothing ticked');
+  save(); haptic([8, 30, 12]); V.ocH = null; render(); ocNext(n===1 ? '1 holding updated' : n + ' holdings updated');
+}
+
+/* ---------- PAN in the details vault: for opening password-protected PDFs later ---------- */
+function panModal(){ dvEnsure(() => { const p = ((V.dv.data.me || {}).pan) || '';
+  openModal('Your PAN', `<div class="sub">Kept in the details vault, locked with your passphrase. Used only to open password-protected PDFs (bank statements, mutual-fund CAS) on this phone. PDF import comes in a later update.</div>
+    <label class="f">PAN<input id="pn_v" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" placeholder="ABCDE1234F" value="${esc(p)}"></label>
+    <div class="row"><button class="pri" onclick="panSave()">Save</button>${p ? '<button class="bad" onclick="panSave(1)">Remove</button>' : ''}<button onclick="closeModal()">Cancel</button></div>`); }); }
+async function panSave(del){
+  const v = (mv('pn_v') || '').toUpperCase().replace(/\s/g, ''); if(!del && !/^[A-Z]{5}\d{4}[A-Z]$/.test(v)) return toast('PAN is 10 characters, like ABCDE1234F');
+  if(!V.dv) return toast('Unlock the details first');
+  const me = Object.assign({}, V.dv.data.me); if(del) delete me.pan; else me.pan = v; V.dv.data.me = me; S.panSet = !del;
+  await dvSave(); closeModal(); render(); toast(del ? 'PAN removed' : 'PAN saved – locked in your details');
+}
+
+
 /* ---- details vault: UPI IDs, last 4 digits, IFSC, expiry … locked with its own passphrase (AES-256-GCM, key from PBKDF2). Never PINs, CVV, passwords or OTPs. ---- */
 async function dvCreate(pass){ const salt = rnd(16), key = await kdfKey(pass, salt, PB_ITER), data = { a:{} }, e = await aesE(key, enc8(JSON.stringify(data))); S.dv = { v:1, salt:B64(salt), iter:PB_ITER, iv:e.iv, ct:e.ct }; save(); V.dv = { key, pass, data }; V.dvAt = Date.now(); }
 async function dvOpen(pass){ const d = S.dv, key = await kdfKey(pass, UB64(d.salt), d.iter), data = JSON.parse(dec8(await aesD(key, d))); V.dv = { key, pass, data }; V.dvAt = Date.now(); }
@@ -4017,7 +4358,7 @@ async function dvChange(){
   lkOk('dv'); if(a.length < 8) return toast('Use at least 8 characters'); if(a !== b) return toast('The two do not match');
   const old = V.dv.pass, salt = rnd(16), key = await kdfKey(a, salt, PB_ITER); V.dv.key = key; V.dv.pass = a; S.dv.salt = B64(salt); S.dv.iter = PB_ITER; await dvSave(); await intrRewrap(old, a); closeModal(); toast('Passphrase changed');
 }
-function dvEraseModal(){ ask('Erase the details vault?', 'All saved UPI IDs and details are deleted so you can start over. This cannot be undone.', 'Erase', () => { delete S.dv; V.dv = null; save(); render(); toast('Details vault erased'); }, true); }
+function dvEraseModal(){ ask('Erase the details vault?', 'All saved UPI IDs and details are deleted so you can start over. This cannot be undone.', 'Erase', () => { delete S.dv; V.dv = null; S.panSet = false; save(); render(); toast('Details vault erased'); }, true); }
 const dvAccs = () => S.accounts.filter(a => ['bank', 'credit', 'wallet', 'paypal'].includes(a.type));
 const dvCards = () => S.methods.filter(m => m.kind==='debit' && acc(m.accountId));
 const dvKey = (id, isM) => (isM ? 'm:' : 'a:') + id;
@@ -4050,8 +4391,10 @@ function rDetails(){
   const card = (title, markHtml, key, kind) => { const rec = V.dv.data.a[key] || {}, rows = dvRows(rec, kind);
     return `<div class="card"><h2 style="display:flex;align-items:center;gap:8px">${markHtml}<span style="flex:1">${esc(title)}</span><button class="sm" onclick="dvEdit('${key}','${kind}')">${rows.length ? 'Edit' : 'Add'}</button></h2>${rows.length ? rows.map(([l, v, c, ap]) => `<div class="row" style="justify-content:space-between;align-items:center"><span class="sub" style="display:flex;align-items:center;gap:6px">${ap ? mark(guessBrand(ap) || '', 16, ap) : ''}${esc(l)}</span><span>${esc(v)} ${c ? cp(v) : ''}</span></div>`).join('') : '<div class="sub">Nothing saved yet.</div>'}</div>`; };
   const accs = dvAccs().map(a => card(a.name, markA(a, 22), dvKey(a.id), a.type==='credit' ? 'card' : 'bank')), cards = dvCards().map(m => card(m.name, mark('card', 22), dvKey(m.id, true), 'card'));
-  return `<div class="card"><h2>Details vault <span><button class="sm" onclick="dvLockNow()">Lock</button> <button class="sm ghost" onclick="go('sec')">Back</button></span></h2><div class="sub">Locked again when you leave the app or after 5 minutes. Copied text is cleared from the clipboard after 30 seconds. Never save PINs, CVV, passwords or OTPs here.</div></div>${accs.join('')}${cards.join('')}`;
+  return `<div class="card"><h2>Details vault <span><button class="sm" onclick="dvLockNow()">Lock</button> <button class="sm ghost" onclick="go('sec')">Back</button></span></h2><div class="sub">Locked again when you leave the app or after 5 minutes. Copied text is cleared from the clipboard after 30 seconds. Never save PINs, CVV, passwords or OTPs here.</div></div>${dvMeCard(cp)}${accs.join('')}${cards.join('')}`;
 }
+function dvMeCard(cp){ const pan = (V.dv.data.me || {}).pan;
+  return `<div class="card"><h2 style="display:flex;align-items:center;gap:8px">${mark('id', 22)}<span style="flex:1">You</span><button class="sm" onclick="panModal()">${pan ? 'Edit' : 'Add'}</button></h2>${pan ? `<div class="row" style="justify-content:space-between;align-items:center"><span class="sub">PAN</span><span>${esc(pan)} ${cp(pan)}</span></div>` : '<div class="sub">Add your PAN – it opens password-protected bank statements and mutual-fund PDFs later, on this phone.</div>'}</div>`; }
 function dvCopy(i){ const t = (V.dvCopy || [])[i]; if(!t) return; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { toast('Copied – cleared in 30 seconds'); setTimeout(() => { try{ navigator.clipboard.writeText(''); }catch(e){} }, 30000); }, () => toast('Could not copy')); V.dvAt = Date.now(); }
 function dvEdit(key, kind){
   if(!V.dv) return dvEnsure(() => dvEdit(key, kind));
